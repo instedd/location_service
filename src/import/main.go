@@ -1,29 +1,18 @@
 package main
 
 import (
-	"fmt"
-	"geojson"
+	"geom"
 	"github.com/jonas-p/go-shp"
-	elastigo "github.com/mattbaird/elastigo/lib"
+	"log"
+	"model"
+	"store"
 )
 
-type Location struct {
-	Name  string        `json:"name"`
-	Shape geojson.Shape `json:"shape"`
-}
-
 func main() {
-	es := elastigo.NewConn()
-	es.CreateIndex("location_service")
-
-	type hash map[string]interface{}
-	err := es.PutMapping("location_service", "location", Location{}, elastigo.MappingOptions{
-		Properties: hash{"shape": hash{
-			"type": "geo_shape",
-		}},
-	})
+	db, err := store.NewSqlStore()
+	// db, err := store.NewElasticSearchStore()
 	if err != nil {
-		println(err.Error())
+		log.Fatal(err)
 	}
 
 	shapefile, _ := shp.Open("/Users/waj/Downloads/ARG_adm/ARG_adm1.shp")
@@ -48,28 +37,37 @@ func main() {
 		// print attributes
 		// for k, f := range fields {
 		// 	val := shapefile.ReadAttribute(n, k)
-		// 	fmt.Printf("\t%v: %v\n", f, val)
+		// 	log.Printf("\t%v: %v\n", f, val)
 		// }
-		// fmt.Println()
+		// log.Println()
 
-		shape, err := geojson.FromShapefile(p)
+		locationName := toUtf8([]byte(shapefile.ReadAttribute(n, name_idx)))
+		log.Println(locationName)
+
+		shape, err := geom.FromShapefile(p)
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 			continue
 		}
 
-		location := Location{
-			Name:  shapefile.ReadAttribute(n, name_idx),
+		dbLocation := &model.Location{
+			Name:  locationName,
 			Shape: shape,
 		}
 
-		_, err = es.Index("location_service", "location", "", nil, location)
+		err = db.AddLocation(dbLocation)
 		if err != nil {
-			println(location.Name)
-			println(err.Error())
+			log.Fatal(err)
 		}
 
 	}
 
-	es.Flush()
+}
+
+func toUtf8(iso8859_1_buf []byte) string {
+	buf := make([]rune, len(iso8859_1_buf))
+	for i, b := range iso8859_1_buf {
+		buf[i] = rune(b)
+	}
+	return string(buf)
 }
