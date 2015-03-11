@@ -1,4 +1,4 @@
-GOPATH:=$(shell pwd)/deps:$(shell pwd)
+export GOPATH=$(shell pwd)/deps:$(shell pwd)
 
 import:
 	go get -v -d import
