@@ -11,38 +11,60 @@ type esStore struct {
 }
 
 type esLocation struct {
-	Name  string      `json:"name"`
+	ParentId *string `json:"parent_id"`
+	Name     string  `json:"name"`
+}
+
+type esGeometry struct {
 	Shape interface{} `json:"shape"`
 }
+
+type hash map[string]interface{}
 
 func NewElasticSearchStore() (Store, error) {
 	conn := elastigo.NewConn()
 	conn.CreateIndex("location_service")
 
-	type hash map[string]interface{}
-	err := conn.PutMapping("location_service", "location", model.Location{}, elastigo.MappingOptions{
-		Properties: hash{"shape": hash{
-			"type": "geo_shape",
-		}},
-	})
-
+	err := conn.PutMapping("location_service", "location", esLocation{}, elastigo.MappingOptions{})
 	if err != nil {
 		return nil, err
 	}
+
+	err = conn.PutMapping("location_service", "geometry", esGeometry{}, elastigo.MappingOptions{
+		Parent: &elastigo.ParentOptions{Type: "location"},
+		Properties: hash{
+			"shape": hash{
+				"type": "geo_shape",
+				"tree": "quadtree",
+			},
+		},
+	})
 
 	return esStore{conn}, nil
 }
 
 func (self esStore) AddLocation(location *model.Location) error {
+	var err error
 	shape, err := geojson.ToGeoJSON(location.Shape)
 	if err != nil {
 		return err
 	}
 
-	_, err = self.conn.Index("location_service", "location", "", nil, esLocation{
-		Name:  location.Name,
-		Shape: shape,
-	})
+	_, err = self.conn.Index("location_service", "location", location.Id, nil,
+		esLocation{
+			ParentId: location.ParentId,
+			Name:     location.Name,
+		})
+
+	if err != nil {
+		return err
+	}
+
+	_, err = self.conn.IndexWithParameters("location_service", "geometry", location.Id, location.Id, 0, "", "", "", 0, "", "", false, nil,
+		esGeometry{
+			Shape: shape,
+		})
+
 	return err
 }
 
