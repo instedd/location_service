@@ -5,8 +5,8 @@ import (
 )
 
 type Location struct {
-	Id       int
-	ParentId int
+	Id       string
+	ParentId *string
 	Level    int
 	TypeName string
 	Name     string
