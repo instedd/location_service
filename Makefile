@@ -1,6 +1,8 @@
 export GOPATH=$(shell pwd)/deps:$(shell pwd)
 export GOBIN=$(shell pwd)/bin
 
+all: import search
+
 import:
 	go get -v -d importer
 	go install importer
