@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func LoadShapefile(store store.Store, path string, set string, idColumns []string, nameColumn string) {
+func LoadShapefile(store store.Store, path string, set string, idColumns []string, nameColumn string, level int) {
 	shapefile, err := shp.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -64,6 +64,7 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 			ParentId: parentId,
 			Name:     locationName,
 			Shape:    shape,
+			Level:    level,
 		}
 
 		err = store.AddLocation(dbLocation)

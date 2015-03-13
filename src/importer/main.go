@@ -48,17 +48,18 @@ func main() {
 	for _, file := range flag.Args() {
 		var defaultId, nameField string
 		var idFields []string
-		loadSourceSettings(file, source, &defaultId, &idFields, &nameField)
+		var level int
+		loadSourceSettings(file, source, &defaultId, &idFields, &nameField, &level)
 		if (id == "") {
 			id = defaultId
 		}
 
-		fmt.Printf("\nProcessing %s file %s:\n ID prefix: %s\n ID fields: %s\n Name field: %s\n\n", source, file, id, idFields, nameField)
-		load.LoadShapefile(db, file, id, idFields, nameField)
+		fmt.Printf("\nProcessing %s file %s:\n ID prefix: %s\n ID fields: %s\n Name field: %s\n Level: %d\n\n", source, file, id, idFields, nameField, level)
+		load.LoadShapefile(db, file, id, idFields, nameField, level)
 	}
 }
 
-func loadSourceSettings(file string, source string, defaultId *string, idFields *[]string, nameField *string) {
+func loadSourceSettings(file string, source string, defaultId *string, idFields *[]string, nameField *string, plevel *int) {
 	switch (source) {
 
 	case "gadm", "GADM":
@@ -66,6 +67,7 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 		gadmRegexp := regexp.MustCompile("(?i)^(?:.+/)?[a-z]+_adm(\\d+)\\.shp$")
 		match := gadmRegexp.FindStringSubmatch(file)
 		level, _ := strconv.Atoi(match[1])
+		*plevel = level
 
 		if (level == 0) {
 			*idFields = []string{"ISO"}
@@ -84,6 +86,7 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 		neRegexp := regexp.MustCompile("(?i)^(?:.+/)?[a-z0-9_]+_admin_(\\d+)_[a-z0-9_]+\\.shp$")
 		match := neRegexp.FindStringSubmatch(file)
 		level, _ := strconv.Atoi(match[1])
+		*plevel = level
 
 		if (level == 0) {
 			*idFields = []string{"SOV_A3"}
