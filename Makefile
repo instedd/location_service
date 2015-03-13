@@ -5,5 +5,9 @@ import:
 	go get -v -d importer
 	go install importer
 
+search:
+	go get -v -d search
+	go install search
+
 goose:
 	go get bitbucket.org/liamstask/goose/cmd/goose

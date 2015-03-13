@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"github.com/foobaz/geom/encoding/geojson"
 	elastigo "github.com/mattbaird/elastigo/lib"
 	"model"
@@ -66,6 +67,50 @@ func (self esStore) AddLocation(location *model.Location) error {
 		})
 
 	return err
+}
+
+func (self esStore) FindLocationsByPoint(x, y float64, includeShape bool) ([]model.Location, error) {
+	result, err := self.conn.Search("location_service", "location", nil, hash{
+		"filter": hash{
+			"has_child": hash{
+				"type": "geometry",
+				"query": hash{
+					"geo_shape": hash{
+						"shape": hash{
+							"shape": hash{
+								"type":        "point",
+								"coordinates": []float64{x, y},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	locations := make([]model.Location, 0, 5)
+
+	for _, hit := range result.Hits.Hits {
+		var location esLocation
+		err = json.Unmarshal(*hit.Source, &location)
+
+		if err != nil {
+			return nil, err
+		}
+
+		locations = append(locations, model.Location{
+			Id:       result.Hits.Hits[0].Id,
+			ParentId: location.ParentId,
+			Name:     location.Name,
+		})
+	}
+
+	return locations, nil
+
 }
 
 func (self esStore) Begin() Store {

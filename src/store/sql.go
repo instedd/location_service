@@ -32,6 +32,27 @@ func (self sqlStore) AddLocation(location *model.Location) error {
 	return err
 }
 
+func (self sqlStore) FindLocationsByPoint(x, y float64, includeShape bool) ([]model.Location, error) {
+	rows, err := self.db.Query(`SELECT id, parent_id, name FROM locations WHERE ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), shape)`, x, y)
+	if err != nil {
+		return nil, err
+	}
+
+	locations := make([]model.Location, 0, 5)
+
+	for rows.Next() {
+		var location model.Location
+		err := rows.Scan(&location.Id, &location.ParentId, &location.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		locations = append(locations, location)
+	}
+
+	return locations, nil
+}
+
 func (self sqlStore) Begin() Store {
 	return self
 }
