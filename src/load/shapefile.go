@@ -43,13 +43,13 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 
 		var parentId *string
 		if len(idColumns) > 1 {
-			str := set + ":" + strings.Join(idParts[:len(idParts)-1], "/")
+			str := set + ":" + strings.Join(idParts[:len(idParts)-1], "_")
 			parentId = &str
 		} else {
 			parentId = nil
 		}
 
-		locationId := set + ":" + strings.Join(idParts, "/")
+		locationId := set + ":" + strings.Join(idParts, "_")
 		locationName := toUtf8(shapefile.ReadAttribute(n, nameIdx))
 		log.Println(locationName)
 
