@@ -57,6 +57,9 @@ func main() {
 		fmt.Printf("\nProcessing %s file %s:\n ID prefix: %s\n ID fields: %s\n Name field: %s\n Level: %d\n\n", source, file, id, idFields, nameField, level)
 		load.LoadShapefile(db, file, id, idFields, nameField, level)
 	}
+
+	fmt.Printf("\nRunning final update on all imported data\n")
+	db.Finish()
 }
 
 func loadSourceSettings(file string, source string, defaultId *string, idFields *[]string, nameField *string, plevel *int) {

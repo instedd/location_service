@@ -120,3 +120,6 @@ func (self esStore) Begin() Store {
 func (self esStore) Flush() {
 	self.conn.Flush()
 }
+
+func (self esStore) Finish() {
+}

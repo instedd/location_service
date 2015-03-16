@@ -58,5 +58,8 @@ func (self sqlStore) Begin() Store {
 }
 
 func (self sqlStore) Flush() {
+}
 
+func (self sqlStore) Finish() {
+	self.db.Exec("UPDATE locations SET leaf = NOT EXISTS (SELECT 1 FROM locations l2 WHERE l2.parent_id = locations.id)")
 }

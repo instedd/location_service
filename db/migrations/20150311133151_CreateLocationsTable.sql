@@ -5,6 +5,7 @@ CREATE TABLE locations (
   level INT,
   type_name VARCHAR(255),
   name VARCHAR(255),
+  leaf BOOLEAN,
   shape GEOMETRY
 );
 
