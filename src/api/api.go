@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	// "github.com/foobaz/geom/encoding/geojson"
+	"github.com/foobaz/geom/encoding/geojson"
 	"log"
 	"net/http"
 	"store"
@@ -30,7 +30,7 @@ func handler(res http.ResponseWriter, req *http.Request) {
 	x, _ := strconv.ParseFloat(req.URL.Query().Get("x"), 64)
 	y, _ := strconv.ParseFloat(req.URL.Query().Get("y"), 64)
 
-	locations, err := db.FindLocationsByPoint(x, y, false)
+	locations, err := db.FindLocationsByPoint(x, y, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,15 +39,15 @@ func handler(res http.ResponseWriter, req *http.Request) {
 
 	for i, loc := range locations {
 
-		// locationShape, err := geojson.ToGeoJSON(loc.Shape)
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
+		locationShape, err := geojson.ToGeoJSON(loc.Shape)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		responseLocations[i] = location{
 			Id:   loc.Id,
 			Name: loc.Name,
-			// Shape: locationShape,
+			Shape: locationShape,
 		}
 	}
 

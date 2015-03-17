@@ -6,6 +6,8 @@ import (
 	"github.com/foobaz/geom/encoding/wkb"
 	_ "github.com/lib/pq"
 	"model"
+	"fmt"
+	"github.com/foobaz/geom"
 )
 
 type sqlStore struct {
@@ -21,8 +23,19 @@ func NewSqlStore() (Store, error) {
 	return sqlStore{db: db}, nil
 }
 
+// TODO: Implement Valuer and Scanner interfaces for geometries
+// See http://jmoiron.net/blog/built-in-interfaces/
+// func (l geom.T) Value() (driver.Value, error) {
+// 	wkb, err := wkb.Encode(location.Shape, binary.LittleEndian, 2)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return wkb, nil
+// }
+
+
 func (self sqlStore) AddLocation(location *model.Location) error {
-	wkb, err := wkb.Encode(location.Shape, binary.LittleEndian, 2)
+	wkb, err := wkb.Encode(location.Shape, binary.LittleEndian, geom.TwoD)
 	if err != nil {
 		return err
 	}
@@ -33,7 +46,15 @@ func (self sqlStore) AddLocation(location *model.Location) error {
 }
 
 func (self sqlStore) FindLocationsByPoint(x, y float64, includeShape bool) ([]model.Location, error) {
-	rows, err := self.db.Query(`SELECT id, parent_id, name FROM locations WHERE ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), shape)`, x, y)
+	var fields string
+	if (includeShape) {
+		fields = `id, parent_id, name, ST_AsBinary(shape) as binshape`
+	} else {
+		fields = `id, parent_id, name`
+	}
+
+	query := fmt.Sprintf("SELECT %s FROM locations WHERE ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), shape)", fields)
+	rows, err := self.db.Query(query, x, y)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +63,17 @@ func (self sqlStore) FindLocationsByPoint(x, y float64, includeShape bool) ([]mo
 
 	for rows.Next() {
 		var location model.Location
-		err := rows.Scan(&location.Id, &location.ParentId, &location.Name)
+
+		var err error
+		if includeShape {
+			var binshape []byte
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &binshape)
+			shape, _ := wkb.Decode(binshape)
+			location.Shape = shape
+		} else {
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name)
+		}
+
 		if err != nil {
 			return nil, err
 		}
