@@ -1,16 +1,12 @@
 package main
 
 import (
-	"encoding/json"
-	"github.com/foobaz/geom/encoding/geojson"
-	"log"
 	"net/http"
-	"store"
 	"strconv"
 )
 
 func main() {
-	http.HandleFunc("/lookup", handler)
+	http.HandleFunc("/lookup", lookupHandler)
 	http.ListenAndServe(":8080", nil)
 }
 
@@ -20,40 +16,19 @@ type location struct {
 	Shape interface{} `json:"shape,omitempty"`
 }
 
-func handler(res http.ResponseWriter, req *http.Request) {
-	res.Header().Add("Server", "location service")
-	db, err := store.NewSqlStore()
-	if err != nil {
-		log.Fatal(err)
-	}
+type params struct {
+	ancestors bool
+	shapes    bool
+}
 
-	x, _ := strconv.ParseFloat(req.URL.Query().Get("x"), 64)
-	y, _ := strconv.ParseFloat(req.URL.Query().Get("y"), 64)
+func parseParams(req *http.Request) (params, error) {
+	var p params
+	p.ancestors = getBool(req, "ancestors")
+	p.shapes = getBool(req, "shapes")
+	return p, nil
+}
 
-	locations, err := db.FindLocationsByPoint(x, y, true)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	responseLocations := make([]location, len(locations))
-
-	for i, loc := range locations {
-
-		locationShape, err := geojson.ToGeoJSON(loc.Shape)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		responseLocations[i] = location{
-			Id:   loc.Id,
-			Name: loc.Name,
-			Shape: locationShape,
-		}
-	}
-
-	enc := json.NewEncoder(res)
-	err = enc.Encode(responseLocations)
-	if err != nil {
-		log.Fatal(err)
-	}
+func getBool(req *http.Request, key string) bool {
+	val, err := strconv.ParseBool(req.URL.Query().Get(key))
+	return (err == nil) && val
 }
