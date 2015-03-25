@@ -50,18 +50,26 @@ func (self sqlStore) AddLocation(location *model.Location) error {
 func (self sqlStore) FindLocationsByPoint(x, y float64, includeShape bool) ([]model.Location, error) {
 	var fields string
 	if includeShape {
-		fields = `id, parent_id, name, ST_AsBinary(shape) as binshape`
+		fields = `a.id, a.parent_id, a.name, ST_AsBinary(a.shape) as binshape`
 	} else {
-		fields = `id, parent_id, name`
+		fields = `a.id, a.parent_id, a.name`
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM locations WHERE leaf = TRUE AND ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), shape)", fields)
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM locations AS a
+			INNER JOIN locations as l
+			ON a.id = ANY(l.ancestors_ids) OR a.id = l.id
+		WHERE l.leaf = TRUE
+			AND ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), l.shape)
+		ORDER BY a.level DESC`, fields)
+
 	rows, err := self.db.Query(query, x, y)
 	if err != nil {
 		return nil, err
 	}
 
-	locations := make([]model.Location, 0, 5)
+	locations := make([]model.Location, 0, 20)
 
 	for rows.Next() {
 		var location model.Location
