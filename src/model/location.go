@@ -5,10 +5,11 @@ import (
 )
 
 type Location struct {
-	Id       string
-	ParentId *string
-	Level    int
-	TypeName string
-	Name     string
-	Shape    geom.T
+	Id           string
+	ParentId     *string
+	AncestorsIds []string
+	Level        int
+	TypeName     string
+	Name         string
+	Shape        geom.T
 }

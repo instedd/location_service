@@ -3,11 +3,11 @@ package store
 import (
 	"database/sql"
 	"encoding/binary"
+	"fmt"
+	"github.com/foobaz/geom"
 	"github.com/foobaz/geom/encoding/wkb"
 	_ "github.com/lib/pq"
 	"model"
-	"fmt"
-	"github.com/foobaz/geom"
 )
 
 type sqlStore struct {
@@ -23,37 +23,39 @@ func NewSqlStore() (Store, error) {
 	return sqlStore{db: db}, nil
 }
 
-// TODO: Implement Valuer and Scanner interfaces for geometries
-// See http://jmoiron.net/blog/built-in-interfaces/
-// func (l geom.T) Value() (driver.Value, error) {
-// 	wkb, err := wkb.Encode(location.Shape, binary.LittleEndian, 2)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return wkb, nil
-// }
-
-
 func (self sqlStore) AddLocation(location *model.Location) error {
 	wkb, err := wkb.Encode(location.Shape, binary.LittleEndian, geom.TwoD)
 	if err != nil {
 		return err
 	}
 
-	_, err = self.db.Exec(`INSERT INTO locations(id, parent_id, level, type_name, name, shape) VALUES ($1, $2, $3, $4, $5, ST_GeomFromWKB($6, 4326))`,
-		location.Id, location.ParentId, location.Level, location.TypeName, location.Name, wkb)
+	var ancestors StringSlice
+
+	if location.ParentId != nil {
+		err = self.db.QueryRow("SELECT ancestors_ids FROM locations WHERE id = $1", *location.ParentId).Scan(&ancestors)
+		if err != nil {
+			return err
+		}
+
+		ancestors = append(ancestors, *location.ParentId)
+	} else {
+		ancestors = make([]string, 0)
+	}
+
+	_, err = self.db.Exec(`INSERT INTO locations(id, parent_id, level, type_name, name, shape, ancestors_ids) VALUES ($1, $2, $3, $4, $5, ST_GeomFromWKB($6, 4326), $7)`,
+		location.Id, location.ParentId, location.Level, location.TypeName, location.Name, wkb, &ancestors)
 	return err
 }
 
 func (self sqlStore) FindLocationsByPoint(x, y float64, includeShape bool) ([]model.Location, error) {
 	var fields string
-	if (includeShape) {
+	if includeShape {
 		fields = `id, parent_id, name, ST_AsBinary(shape) as binshape`
 	} else {
 		fields = `id, parent_id, name`
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM locations WHERE ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), shape)", fields)
+	query := fmt.Sprintf("SELECT %s FROM locations WHERE leaf = TRUE AND ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), shape)", fields)
 	rows, err := self.db.Query(query, x, y)
 	if err != nil {
 		return nil, err
