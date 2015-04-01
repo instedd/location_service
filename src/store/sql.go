@@ -2,10 +2,7 @@ package store
 
 import (
 	"database/sql"
-	"encoding/binary"
 	"fmt"
-	"github.com/foobaz/geom"
-	"github.com/foobaz/geom/encoding/wkb"
 	_ "github.com/lib/pq"
 	"model"
 )
@@ -24,12 +21,8 @@ func NewSqlStore() (Store, error) {
 }
 
 func (self sqlStore) AddLocation(location *model.Location) error {
-	wkb, err := wkb.Encode(location.Shape, binary.LittleEndian, geom.TwoD)
-	if err != nil {
-		return err
-	}
-
-	var ancestors StringSlice
+	var ancestors model.StringSlice
+	var err error
 
 	if location.ParentId != nil {
 		err = self.db.QueryRow("SELECT ancestors_ids FROM locations WHERE id = $1", *location.ParentId).Scan(&ancestors)
@@ -43,45 +36,114 @@ func (self sqlStore) AddLocation(location *model.Location) error {
 	}
 
 	_, err = self.db.Exec(`INSERT INTO locations(id, parent_id, level, type_name, name, shape, ancestors_ids) VALUES ($1, $2, $3, $4, $5, ST_GeomFromWKB($6, 4326), $7)`,
-		location.Id, location.ParentId, location.Level, location.TypeName, location.Name, wkb, &ancestors)
+		location.Id, location.ParentId, location.Level, location.TypeName, location.Name, location.Shape, &ancestors)
 	return err
 }
 
-func (self sqlStore) FindLocationsByPoint(x, y float64, includeShape bool) ([]model.Location, error) {
-	var fields string
-	if includeShape {
-		fields = `a.id, a.parent_id, a.name, ST_AsBinary(a.shape) as binshape`
-	} else {
-		fields = `a.id, a.parent_id, a.name`
-	}
-
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM locations AS a
-			INNER JOIN locations as l
-			ON a.id = ANY(l.ancestors_ids) OR a.id = l.id
-		WHERE l.leaf = TRUE
-			AND ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), l.shape)
-		ORDER BY a.level DESC`, fields)
-
+func (self sqlStore) FindLocationsByPoint(x, y float64, opts model.ReqOptions) ([]model.Location, error) {
+	query := QueryFor("l.leaf = TRUE AND ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), l.shape)", opts)
 	rows, err := self.db.Query(query, x, y)
 	if err != nil {
 		return nil, err
 	}
 
+	return ReadLocations(rows, opts)
+}
+
+func (self sqlStore) FindLocationsByIds(ids []string, opts model.ReqOptions) ([]model.Location, error) {
+	if len(ids) == 0 {
+		return make([]model.Location, 0), nil
+	}
+
+	placeholders := ""
+	for i, _ := range ids {
+		if i == 0 {
+			placeholders = "$1"
+		} else {
+			placeholders = fmt.Sprintf("%s,$%d", placeholders, i+1)
+		}
+	}
+
+	query := QueryFor(fmt.Sprintf("l.id IN (%s)", placeholders), opts)
+
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+
+	rows, err := self.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return ReadLocations(rows, opts)
+}
+
+func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOptions) ([]model.Location, error) {
+	fields := FieldsFor(opts, "l")
+
+	var query string
+	query = fmt.Sprintf(`
+		SELECT %s
+		FROM locations AS l
+		WHERE l.parent_id = $1
+		ORDER BY id`, fields)
+
+	rows, err := self.db.Query(query, parentId)
+	if err != nil {
+		return nil, err
+	}
+
+	return ReadLocations(rows, opts)
+}
+
+func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]model.Location, error) {
+	query := QueryFor(`l.name LIKE $1 || '%%'`, opts)
+	rows, err := self.db.Query(query, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return ReadLocations(rows, opts)
+}
+
+func FieldsFor(opts model.ReqOptions, alias string) string {
+	fields := fmt.Sprintf(`%s.id, %s.parent_id, %s.name, %s.ancestors_ids`, alias, alias, alias, alias)
+	if opts.Shapes {
+		fields = fmt.Sprintf(`%s, ST_AsBinary(%s.shape) as binshape`, fields, alias)
+	}
+	return fields
+}
+
+func QueryFor(predicate string, opts model.ReqOptions) string {
+	if opts.Ancestors {
+		return fmt.Sprintf(`
+				SELECT DISTINCT %s
+				FROM locations AS l
+					INNER JOIN locations as t
+					ON t.id = ANY(l.ancestors_ids) OR t.id = l.id
+				WHERE %s
+				ORDER BY t.id`, FieldsFor(opts, "t"), predicate)
+	} else {
+		return fmt.Sprintf(`
+				SELECT %s
+				FROM locations AS l
+				WHERE %s
+				ORDER BY l.id`, FieldsFor(opts, "l"), predicate)
+	}
+}
+
+func ReadLocations(rows *sql.Rows, opts model.ReqOptions) ([]model.Location, error) {
 	locations := make([]model.Location, 0, 20)
 
 	for rows.Next() {
 		var location model.Location
 
 		var err error
-		if includeShape {
-			var binshape []byte
-			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &binshape)
-			shape, _ := wkb.Decode(binshape)
-			location.Shape = shape
+		if opts.Shapes {
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.AncestorsIds, &location.Shape)
 		} else {
-			err = rows.Scan(&location.Id, &location.ParentId, &location.Name)
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.AncestorsIds)
 		}
 
 		if err != nil {

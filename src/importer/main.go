@@ -1,13 +1,13 @@
 package main
 
 import (
-	"load"
-	"log"
-	"store"
 	"flag"
 	"fmt"
+	"load"
+	"log"
 	"os"
 	"regexp"
+	"store"
 	"strconv"
 )
 
@@ -21,11 +21,11 @@ func main() {
 
 	flag.StringVar(&source, "source", "", "Data source (required). Currently supports gadm and naturalearth.")
 	flag.StringVar(&id, "id", "", "Identifier prefix for all imported data, defaults to shortened source name.")
-	flag.StringVar(&storetype, "store", "sql", "Store type to use. Available: sql, elasticsearch.")
+	flag.StringVar(&storetype, "store", "sql", "Store type to use. Available: sql.")
 
 	flag.Parse()
 
-	if (source == "") {
+	if source == "" {
 		fmt.Fprintf(os.Stderr, "Error: Option 'source' is required\n")
 		flag.Usage()
 		return
@@ -34,10 +34,8 @@ func main() {
 	var db store.Store
 	var err error
 	switch storetype {
-		case "sql", "psql":
-			db, err = store.NewSqlStore()
-		case "elastic", "es", "elasticsearch":
-			db, err = store.NewElasticSearchStore()
+	case "sql", "psql":
+		db, err = store.NewSqlStore()
 	}
 
 	if err != nil {
@@ -50,7 +48,7 @@ func main() {
 		var idFields []string
 		var level int
 		loadSourceSettings(file, source, &defaultId, &idFields, &nameField, &level)
-		if (id == "") {
+		if id == "" {
 			id = defaultId
 		}
 
@@ -63,7 +61,7 @@ func main() {
 }
 
 func loadSourceSettings(file string, source string, defaultId *string, idFields *[]string, nameField *string, plevel *int) {
-	switch (source) {
+	switch source {
 
 	case "gadm", "GADM":
 		*defaultId = "gadm"
@@ -72,7 +70,7 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 		level, _ := strconv.Atoi(match[1])
 		*plevel = level
 
-		if (level == 0) {
+		if level == 0 {
 			*idFields = []string{"ISO"}
 			*nameField = "NAME_ENGLI"
 		} else {
@@ -91,10 +89,10 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 		level, _ := strconv.Atoi(match[1])
 		*plevel = level
 
-		if (level == 0) {
+		if level == 0 {
 			*idFields = []string{"SOV_A3"}
 			*nameField = "ADMIN"
-		} else if (level == 1) {
+		} else if level == 1 {
 			*idFields = []string{"sov_a3", "diss_me"}
 			*nameField = "name"
 		} else {

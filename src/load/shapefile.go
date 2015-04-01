@@ -63,7 +63,7 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 			Id:       locationId,
 			ParentId: parentId,
 			Name:     locationName,
-			Shape:    shape,
+			Shape:    model.GeoShape{shape},
 			Level:    level,
 		}
 

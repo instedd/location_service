@@ -4,21 +4,19 @@ import (
 	"log"
 	"net/http"
 	"store"
-	"strconv"
 )
 
-func lookupHandler(res http.ResponseWriter, req *http.Request) {
+func suggestHandler(res http.ResponseWriter, req *http.Request) {
 	res.Header().Add("Server", "location service")
 	db, err := store.NewSqlStore()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	x, _ := strconv.ParseFloat(req.URL.Query().Get("x"), 64)
-	y, _ := strconv.ParseFloat(req.URL.Query().Get("y"), 64)
+	name := req.URL.Query().Get("name")
 	p, _ := parseParams(req)
 
-	locations, err := db.FindLocationsByPoint(x, y, p)
+	locations, err := db.FindLocationsByName(name, p)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"model"
 	"store"
 	"time"
 )
@@ -15,9 +16,9 @@ func main() {
 
 	start := time.Now()
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 100; i++ {
 
-		locations, err := db.FindLocationsByPoint(-93.035854, 39.586283, true)
+		locations, err := db.FindLocationsByPoint(-93.035854, 39.586283, model.ReqOptions{Shapes: false})
 		// location, err := db.FindLocationByPoint(-58.575606, -34.608224, false)
 		if err != nil {
 			log.Fatal(err)
@@ -27,10 +28,10 @@ func main() {
 			log.Println(location.Name)
 		}
 
-		if (len(locations) > 0) {
-			log.Printf("Shape for %s: ", locations[len(locations)-1].Name)
-			log.Println(locations[len(locations)-1].Shape)
-		}
+		// if (len(locations) > 0) {
+		// 	log.Printf("Shape for %s: ", locations[len(locations)-1].Name)
+		// 	log.Println(locations[len(locations)-1].Shape)
+		// }
 	}
 
 	elapsed := time.Since(start)
