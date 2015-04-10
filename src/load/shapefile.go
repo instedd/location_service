@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func LoadShapefile(store store.Store, path string, set string, idColumns []string, nameColumn string, level int) {
+func LoadShapefile(store store.Store, path string, set string, idColumns []string, nameColumn string, defaultTypeName string, typeColumn string, level int) {
 	shapefile, err := shp.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -19,6 +19,7 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 
 	fields := shapefile.Fields()
 	nameIdx := findFieldColumn(fields, nameColumn)
+	typeIdx := findFieldColumn(fields, typeColumn)
 	idColumnsIdx := make([]int, len(idColumns))
 	for i, col := range idColumns {
 		idColumnsIdx[i] = findFieldColumn(fields, col)
@@ -51,7 +52,12 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 
 		locationId := set + ":" + strings.Join(idParts, "_")
 		locationName := toUtf8(shapefile.ReadAttribute(n, nameIdx))
-		log.Println(locationName)
+		typeName := defaultTypeName
+		if typeIdx > 0 {
+			typeName = toUtf8(shapefile.ReadAttribute(n, typeIdx))
+		}
+
+		log.Printf("%s (%s)\n", locationName, typeName)
 
 		shape, err := geom.FromShapefile(p)
 		if err != nil {
@@ -65,6 +71,7 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 			Name:     locationName,
 			Shape:    model.GeoShape{shape},
 			Level:    level,
+			TypeName: typeName,
 		}
 
 		err = store.AddLocation(dbLocation)
@@ -86,6 +93,10 @@ func toUtf8(str string) string {
 }
 
 func findFieldColumn(fields []shp.Field, name string) int {
+	if len(name) == 0 {
+		return -1
+	}
+
 	var nameBytes [11]byte
 	copy(nameBytes[:], []byte(name))
 

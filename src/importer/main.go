@@ -44,23 +44,23 @@ func main() {
 	}
 
 	for _, file := range flag.Args() {
-		var defaultId, nameField string
+		var defaultId, nameField, typeName, typeField string
 		var idFields []string
 		var level int
-		loadSourceSettings(file, source, &defaultId, &idFields, &nameField, &level)
+		loadSourceSettings(file, source, &defaultId, &idFields, &nameField, &typeName, &typeField, &level)
 		if id == "" {
 			id = defaultId
 		}
 
-		fmt.Printf("\nProcessing %s file %s:\n ID prefix: %s\n ID fields: %s\n Name field: %s\n Level: %d\n\n", source, file, id, idFields, nameField, level)
-		load.LoadShapefile(db, file, id, idFields, nameField, level)
+		fmt.Printf("\nProcessing %s file %s:\n ID prefix: %s\n ID fields: %s\n Name field: %s\n Type name: %s\n Type field: %s\n Level: %d\n\n", source, file, id, idFields, nameField, typeName, typeField, level)
+		load.LoadShapefile(db, file, id, idFields, nameField, typeName, typeField, level)
 	}
 
 	fmt.Printf("\nRunning final update on all imported data\n")
 	db.Finish()
 }
 
-func loadSourceSettings(file string, source string, defaultId *string, idFields *[]string, nameField *string, plevel *int) {
+func loadSourceSettings(file string, source string, defaultId *string, idFields *[]string, nameField *string, typeName *string, typeField *string, plevel *int) {
 	switch source {
 
 	case "gadm", "GADM":
@@ -73,6 +73,7 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 		if level == 0 {
 			*idFields = []string{"ISO"}
 			*nameField = "NAME_ENGLI"
+			*typeName = "Country"
 		} else {
 			*idFields = make([]string, level+1)
 			(*idFields)[0] = "ISO"
@@ -80,6 +81,7 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 				(*idFields)[i] = "ID_" + strconv.Itoa(i)
 			}
 			*nameField = "NAME_" + strconv.Itoa(level)
+			*typeField = "ENGTYPE_" + strconv.Itoa(level)
 		}
 
 	case "naturalearth", "NATURALEARTH", "ne", "NE":
@@ -92,9 +94,11 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 		if level == 0 {
 			*idFields = []string{"SOV_A3"}
 			*nameField = "ADMIN"
+			*typeField = "TYPE"
 		} else if level == 1 {
 			*idFields = []string{"sov_a3", "diss_me"}
 			*nameField = "name"
+			*typeField = "type_en"
 		} else {
 			panic("Level " + match[1] + " not supported for natural earth data")
 		}

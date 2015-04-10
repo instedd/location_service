@@ -35,6 +35,7 @@ func main() {
 type location struct {
 	Id        string      `json:"id"`
 	Name      string      `json:"name"`
+	Type      string      `json:"type"`
 	Ancestors []string    `json:"ancestors"`
 	Shape     interface{} `json:"shape,omitempty"`
 }
@@ -73,6 +74,7 @@ func writeLocations(locations []model.Location, res http.ResponseWriter, p model
 			responseLocations[i] = location{
 				Id:        loc.Id,
 				Name:      loc.Name,
+				Type:      loc.TypeName,
 				Shape:     locationShape,
 				Ancestors: loc.AncestorsIds,
 			}
@@ -80,6 +82,7 @@ func writeLocations(locations []model.Location, res http.ResponseWriter, p model
 			responseLocations[i] = location{
 				Id:        loc.Id,
 				Name:      loc.Name,
+				Type:      loc.TypeName,
 				Ancestors: loc.AncestorsIds,
 			}
 		}

@@ -43,7 +43,7 @@ func (self sqlStore) AddLocation(location *model.Location) error {
 	}
 
 	_, err = self.db.Exec(`INSERT INTO locations(id, parent_id, level, type_name, name, shape, ancestors_ids) VALUES ($1, $2, $3, $4, $5, ST_GeomFromWKB($6, 4326), $7)`,
-		location.Id, location.ParentId, location.Level, location.TypeName, location.Name, location.Shape, &ancestors)
+		location.Id, location.ParentId, location.Level, location.TypeName, location.Name, &location.Shape, &ancestors)
 	return err
 }
 
@@ -115,7 +115,7 @@ func setFor(opts model.ReqOptions, argsBase int) (string, []interface{}) {
 }
 
 func fieldsFor(opts model.ReqOptions, alias string) string {
-	fields := fmt.Sprintf(`%s.id, %s.parent_id, %s.name, %s.ancestors_ids`, alias, alias, alias, alias)
+	fields := fmt.Sprintf(`%s.id, %s.parent_id, %s.name, %s.type_name, %s.ancestors_ids`, alias, alias, alias, alias, alias)
 	if opts.Shapes {
 		fields = fmt.Sprintf(`%s, ST_AsBinary(%s.shape) as binshape`, fields, alias)
 	}
@@ -148,9 +148,9 @@ func readLocations(rows *sql.Rows, opts model.ReqOptions) ([]model.Location, err
 
 		var err error
 		if opts.Shapes {
-			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.AncestorsIds, &location.Shape)
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.AncestorsIds, &location.Shape)
 		} else {
-			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.AncestorsIds)
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.AncestorsIds)
 		}
 
 		if err != nil {
