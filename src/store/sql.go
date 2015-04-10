@@ -41,13 +41,7 @@ func (self sqlStore) AddLocation(location *model.Location) error {
 }
 
 func (self sqlStore) FindLocationsByPoint(x, y float64, opts model.ReqOptions) ([]model.Location, error) {
-	query := QueryFor("l.leaf = TRUE AND ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), l.shape)", opts)
-	rows, err := self.db.Query(query, x, y)
-	if err != nil {
-		return nil, err
-	}
-
-	return ReadLocations(rows, opts)
+	return self.doQuery("l.leaf = TRUE AND ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), l.shape)", opts, x, y)
 }
 
 func (self sqlStore) FindLocationsByIds(ids []string, opts model.ReqOptions) ([]model.Location, error) {
@@ -55,59 +49,56 @@ func (self sqlStore) FindLocationsByIds(ids []string, opts model.ReqOptions) ([]
 		return make([]model.Location, 0), nil
 	}
 
-	placeholders := ""
-	for i, _ := range ids {
-		if i == 0 {
-			placeholders = "$1"
-		} else {
-			placeholders = fmt.Sprintf("%s,$%d", placeholders, i+1)
-		}
+	placeholders := placeholdersFor(ids, 0)
+	args := argsFor(ids)
+	return self.doQuery(fmt.Sprintf("l.id IN (%s)", placeholders), opts, args...)
+}
+
+func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOptions) ([]model.Location, error) {
+	opts.Ancestors = false
+	return self.doQuery("l.parent_id = $1", opts, parentId)
+}
+
+func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]model.Location, error) {
+	return self.doQuery(`l.name LIKE $1 || '%'`, opts, name)
+}
+
+func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs ...interface{}) ([]model.Location, error) {
+	var query string
+	scope, scopeArgs := scopeFor(opts, len(queryArgs))
+
+	if opts.Ancestors {
+		query = fmt.Sprintf(`
+				SELECT DISTINCT %s
+				FROM locations AS l
+					INNER JOIN locations as t
+					ON t.id = ANY(l.ancestors_ids) OR t.id = l.id
+				WHERE %s%s
+				ORDER BY t.id%s`, fieldsFor(opts, "t"), predicate, scope, pagingFor(opts))
+	} else {
+		query = fmt.Sprintf(`
+				SELECT %s
+				FROM locations AS l
+				WHERE %s%s
+				ORDER BY l.id%s`, fieldsFor(opts, "l"), predicate, scope, pagingFor(opts))
 	}
 
-	query := QueryFor(fmt.Sprintf("l.id IN (%s)", placeholders), opts)
+	args := append(queryArgs, scopeArgs...)
 
-	args := make([]interface{}, len(ids))
-	for i, id := range ids {
-		args[i] = id
-	}
+	fmt.Println("Query")
+	fmt.Println(query)
+	fmt.Println("Args")
+	fmt.Println(args)
 
 	rows, err := self.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	return ReadLocations(rows, opts)
+	return readLocations(rows, opts)
 }
 
-func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOptions) ([]model.Location, error) {
-	fields := FieldsFor(opts, "l")
-
-	var query string
-	query = fmt.Sprintf(`
-		SELECT %s
-		FROM locations AS l
-		WHERE l.parent_id = $1
-		ORDER BY id %s`, fields, PagingFor(opts))
-
-	rows, err := self.db.Query(query, parentId)
-	if err != nil {
-		return nil, err
-	}
-
-	return ReadLocations(rows, opts)
-}
-
-func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]model.Location, error) {
-	query := QueryFor(`l.name LIKE $1 || '%%'`, opts)
-	rows, err := self.db.Query(query, name)
-	if err != nil {
-		return nil, err
-	}
-
-	return ReadLocations(rows, opts)
-}
-
-func FieldsFor(opts model.ReqOptions, alias string) string {
+func fieldsFor(opts model.ReqOptions, alias string) string {
 	fields := fmt.Sprintf(`%s.id, %s.parent_id, %s.name, %s.ancestors_ids`, alias, alias, alias, alias)
 	if opts.Shapes {
 		fields = fmt.Sprintf(`%s, ST_AsBinary(%s.shape) as binshape`, fields, alias)
@@ -115,35 +106,25 @@ func FieldsFor(opts model.ReqOptions, alias string) string {
 	return fields
 }
 
-func PagingFor(opts model.ReqOptions) string {
+func pagingFor(opts model.ReqOptions) string {
 	if opts.Limit > 0 {
 		return fmt.Sprintf(" LIMIT %d OFFSET %d", opts.Limit, opts.Offset)
 	} else {
-		return ""
+		return " "
 	}
 }
 
-func QueryFor(predicate string, opts model.ReqOptions) string {
-	if opts.Ancestors {
-		return fmt.Sprintf(`
-				SELECT DISTINCT %s
-				FROM locations AS l
-					INNER JOIN locations as t
-					ON t.id = ANY(l.ancestors_ids) OR t.id = l.id
-				WHERE %s
-				ORDER BY t.id
-				%s`, FieldsFor(opts, "t"), predicate, PagingFor(opts))
+func scopeFor(opts model.ReqOptions, argsBase int) (string, []interface{}) {
+	if len(opts.Scope) > 0 {
+		placeholders := placeholdersFor(opts.Scope, argsBase)
+		query := fmt.Sprintf(" AND (l.id IN (%s) OR (l.ancestors_ids && ARRAY[%s::varchar]))", placeholders, placeholders)
+		return query, argsFor(opts.Scope)
 	} else {
-		return fmt.Sprintf(`
-				SELECT %s
-				FROM locations AS l
-				WHERE %s
-				ORDER BY l.id
-				%s`, FieldsFor(opts, "l"), predicate, PagingFor(opts))
+		return " ", make([]interface{}, 0)
 	}
 }
 
-func ReadLocations(rows *sql.Rows, opts model.ReqOptions) ([]model.Location, error) {
+func readLocations(rows *sql.Rows, opts model.ReqOptions) ([]model.Location, error) {
 	locations := make([]model.Location, 0, 20)
 
 	for rows.Next() {
@@ -164,6 +145,26 @@ func ReadLocations(rows *sql.Rows, opts model.ReqOptions) ([]model.Location, err
 	}
 
 	return locations, nil
+}
+
+func placeholdersFor(arr []string, base int) string {
+	placeholders := ""
+	for i, _ := range arr {
+		if i == 0 {
+			placeholders = fmt.Sprintf("$%d", base+1)
+		} else {
+			placeholders = fmt.Sprintf("%s,$%d", placeholders, i+base+1)
+		}
+	}
+	return placeholders
+}
+
+func argsFor(strArgs []string) []interface{} {
+	args := make([]interface{}, len(strArgs))
+	for i, str := range strArgs {
+		args[i] = str
+	}
+	return args
 }
 
 func (self sqlStore) Begin() Store {

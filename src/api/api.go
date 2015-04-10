@@ -38,6 +38,7 @@ func parseParams(req *http.Request) (model.ReqOptions, error) {
 	p.Shapes = getBool(req, "shapes")
 	p.Limit = getInt(req, "limit")
 	p.Offset = getInt(req, "offset")
+	p.Scope = req.URL.Query()["scope"]
 	return p, nil
 }
 
