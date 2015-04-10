@@ -5,7 +5,10 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"model"
+	"strings"
 )
+
+var debug bool
 
 type sqlStore struct {
 	db *sql.DB
@@ -18,6 +21,10 @@ func NewSqlStore() (Store, error) {
 	}
 
 	return sqlStore{db: db}, nil
+}
+
+func SetDebug(val bool) {
+	debug = val
 }
 
 func (self sqlStore) AddLocation(location *model.Location) error {
@@ -87,10 +94,9 @@ func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs 
 	args := append(queryArgs, setArgs...)
 	args = append(args, scopeArgs...)
 
-	fmt.Println("Query")
-	fmt.Println(query)
-	fmt.Println("Args")
-	fmt.Println(args)
+	if debug {
+		fmt.Printf("\nExecuting query:%s\nWith params: %s\n", strings.Replace(query, "				", " ", -1), args)
+	}
 
 	rows, err := self.db.Query(query, args...)
 	if err != nil {

@@ -7,14 +7,21 @@ import (
 	"github.com/foobaz/geom/encoding/geojson"
 	"model"
 	"net/http"
+	"store"
 	"strconv"
 )
 
 func main() {
 	var port int
+	var debug bool
 
 	flag.IntVar(&port, "port", 8080, "Port where to listen for requests")
+	flag.BoolVar(&debug, "debug", false, "Print debug messages")
 	flag.Parse()
+
+	if debug {
+		store.SetDebug(true)
+	}
 
 	addr := fmt.Sprintf(":%d", port)
 
