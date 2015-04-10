@@ -92,11 +92,11 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 		*plevel = level
 
 		if level == 0 {
-			*idFields = []string{"SOV_A3"}
+			*idFields = []string{"ADM0_A3"}
 			*nameField = "ADMIN"
 			*typeField = "TYPE"
 		} else if level == 1 {
-			*idFields = []string{"sov_a3", "diss_me"}
+			*idFields = []string{"adm0_a3", "diss_me"}
 			*nameField = "name"
 			*typeField = "type_en"
 		} else {
