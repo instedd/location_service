@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"github.com/foobaz/geom/encoding/geojson"
 	"model"
 	"net/http"
@@ -9,11 +11,18 @@ import (
 )
 
 func main() {
+	var port int
+
+	flag.IntVar(&port, "port", 8080, "Port where to listen for requests")
+	flag.Parse()
+
+	addr := fmt.Sprintf(":%d", port)
+
 	http.HandleFunc("/lookup", lookupHandler)
 	http.HandleFunc("/details", detailsHandler)
 	http.HandleFunc("/children", childrenHandler)
 	http.HandleFunc("/suggest", suggestHandler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(addr, nil)
 }
 
 type location struct {
