@@ -87,7 +87,7 @@ func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOption
 		SELECT %s
 		FROM locations AS l
 		WHERE l.parent_id = $1
-		ORDER BY id`, fields)
+		ORDER BY id %s`, fields, PagingFor(opts))
 
 	rows, err := self.db.Query(query, parentId)
 	if err != nil {
@@ -115,6 +115,14 @@ func FieldsFor(opts model.ReqOptions, alias string) string {
 	return fields
 }
 
+func PagingFor(opts model.ReqOptions) string {
+	if opts.Limit > 0 {
+		return fmt.Sprintf(" LIMIT %d OFFSET %d", opts.Limit, opts.Offset)
+	} else {
+		return ""
+	}
+}
+
 func QueryFor(predicate string, opts model.ReqOptions) string {
 	if opts.Ancestors {
 		return fmt.Sprintf(`
@@ -123,13 +131,15 @@ func QueryFor(predicate string, opts model.ReqOptions) string {
 					INNER JOIN locations as t
 					ON t.id = ANY(l.ancestors_ids) OR t.id = l.id
 				WHERE %s
-				ORDER BY t.id`, FieldsFor(opts, "t"), predicate)
+				ORDER BY t.id
+				%s`, FieldsFor(opts, "t"), predicate, PagingFor(opts))
 	} else {
 		return fmt.Sprintf(`
 				SELECT %s
 				FROM locations AS l
 				WHERE %s
-				ORDER BY l.id`, FieldsFor(opts, "l"), predicate)
+				ORDER BY l.id
+				%s`, FieldsFor(opts, "l"), predicate, PagingFor(opts))
 	}
 }
 
