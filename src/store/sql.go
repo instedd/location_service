@@ -60,12 +60,13 @@ func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOption
 }
 
 func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]model.Location, error) {
-	return self.doQuery(`l.name LIKE $1 || '%'`, opts, name)
+	return self.doQuery(`l.name LIKE ($1 || '%')`, opts, name)
 }
 
 func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs ...interface{}) ([]model.Location, error) {
 	var query string
-	scope, scopeArgs := scopeFor(opts, len(queryArgs))
+	setPredicate, setArgs := setFor(opts, len(queryArgs))
+	scope, scopeArgs := scopeFor(opts, len(queryArgs)+len(setArgs))
 
 	if opts.Ancestors {
 		query = fmt.Sprintf(`
@@ -73,17 +74,18 @@ func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs 
 				FROM locations AS l
 					INNER JOIN locations as t
 					ON t.id = ANY(l.ancestors_ids) OR t.id = l.id
-				WHERE %s%s
-				ORDER BY t.id%s`, fieldsFor(opts, "t"), predicate, scope, pagingFor(opts))
+				WHERE %s%s%s
+				ORDER BY t.id%s`, fieldsFor(opts, "t"), predicate, setPredicate, scope, pagingFor(opts))
 	} else {
 		query = fmt.Sprintf(`
 				SELECT %s
 				FROM locations AS l
-				WHERE %s%s
-				ORDER BY l.id%s`, fieldsFor(opts, "l"), predicate, scope, pagingFor(opts))
+				WHERE %s%s%s
+				ORDER BY l.id%s`, fieldsFor(opts, "l"), predicate, setPredicate, scope, pagingFor(opts))
 	}
 
-	args := append(queryArgs, scopeArgs...)
+	args := append(queryArgs, setArgs...)
+	args = append(args, scopeArgs...)
 
 	fmt.Println("Query")
 	fmt.Println(query)
@@ -96,6 +98,14 @@ func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs 
 	}
 
 	return readLocations(rows, opts)
+}
+
+func setFor(opts model.ReqOptions, argsBase int) (string, []interface{}) {
+	if len(opts.Set) > 0 {
+		return fmt.Sprintf(" AND l.id LIKE ($%d || ':%%')", argsBase+1), []interface{}{opts.Set}
+	} else {
+		return " ", make([]interface{}, 0)
+	}
 }
 
 func fieldsFor(opts model.ReqOptions, alias string) string {

@@ -5,5 +5,6 @@ type ReqOptions struct {
 	Shapes    bool
 	Offset    int
 	Limit     int
+	Set       string
 	Scope     []string
 }
