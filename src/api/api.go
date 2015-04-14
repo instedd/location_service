@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"store"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -48,8 +49,14 @@ func parseParams(req *http.Request) (model.ReqOptions, error) {
 	p.Shapes = getBool(req, "shapes")
 	p.Limit = getInt(req, "limit")
 	p.Offset = getInt(req, "offset")
-	p.Scope = req.URL.Query()["scope"]
 	p.Set = req.URL.Query().Get("set")
+
+	if len(req.URL.Query().Get("scope")) > 0 {
+		p.Scope = strings.Split(req.URL.Query().Get("scope"), ",")
+	} else {
+		p.Scope = make([]string, 0)
+	}
+
 	return p, nil
 }
 

@@ -63,7 +63,12 @@ func (self sqlStore) FindLocationsByIds(ids []string, opts model.ReqOptions) ([]
 
 func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOptions) ([]*model.Location, error) {
 	opts.Ancestors = false
-	return self.doQuery("l.parent_id = $1", opts, parentId)
+	if len(parentId) == 0 {
+		return self.doQuery("l.parent_id IS NULL", opts)
+	} else {
+		return self.doQuery("l.parent_id = $1", opts, parentId)
+	}
+
 }
 
 func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]*model.Location, error) {

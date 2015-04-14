@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"store"
+	"strings"
 )
 
 func detailsHandler(res http.ResponseWriter, req *http.Request) {
@@ -13,7 +14,7 @@ func detailsHandler(res http.ResponseWriter, req *http.Request) {
 		log.Fatal(err)
 	}
 
-	ids, _ := req.URL.Query()["id"]
+	ids := strings.Split(req.URL.Query().Get("id"), ",")
 	p, _ := parseParams(req)
 
 	locations, err := db.FindLocationsByIds(ids, p)

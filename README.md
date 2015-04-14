@@ -26,29 +26,34 @@ API server is started via `bin/api`, optionally providing a `-port XXXX` flag to
 
 All endpoints can be invoked with the following optional parameters:
 
-* **ancestors**: boolean (false), whether to return all the ancestors of the queried locations; for example, a query for California will also return USA if this flag is set.
-* **shapes**: boolean (false), whether to include the polygon in GeoJSON format with the shape of each location.
-* **limit**: int (0), how many records to return.
-* **offset**: int (unbounded), offset of the records to be returned, use together with limit for paging.
-* **scope**: string (none), all results will be limited to the locations specified in this parameter and their descendants; for example, querying for names beginning with `Ca` with `scope=USA` will return _California_ but not _Catamarca_. This parameter can be specified multiple times, and the union of all scopes will be considered.
-* **set**: string (none), which locations set to query; for example, if a server contains both GADM and NaturalEarth data, the search can be restricted to the latter by specifying `set=ne`.
+* `ancestors` boolean (false), whether to return all the ancestors of the queried locations; if set, an additional field `ancestors` will be included for each result
+* `shapes` boolean (false), whether to include the polygon in GeoJSON format with the shape of each location; if set, an additional field `shape` will be included for each result
+* `limit` int (0), how many records to return
+* `offset` int (unbounded), offset of the records to be returned, use together with limit for paging.
+* `scope` string (none), all results will be limited to the locations specified in this parameter and their descendants; for example, querying for names beginning with `Ca` with `scope=gadm:USA,gadm:MEX` will return _California_ but not _Catamarca_
+* `set` string (none), which locations set to query; for example, if a server contains both GADM and NaturalEarth data, the search can be restricted to the latter by specifying `set=ne`.
 
 ### /lookup
 
 Returns all leaf locations that contain the specified point.
-Requires `x` and `y` as float parameters.
+
+- `x` float
+- `y` float
 
 ### /details
 
 Returns the details of all the locations requested by id.
-Requires the parameter `id`, one or multiple times.
+
+- `ids` string, comma separated list of ids
 
 ### /children
 
 Returns the direct children of the specified location.
-Requires the parameter `id`, once.
+
+- `id` string
 
 ### /suggest
 
 Returns all locations with a name that matches the supplied prefix.
-Requires the parameter `name`, once.
+
+- `name` string
