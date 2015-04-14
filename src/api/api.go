@@ -33,11 +33,13 @@ func main() {
 }
 
 type location struct {
-	Id        string      `json:"id"`
-	Name      string      `json:"name"`
-	Type      string      `json:"type"`
-	Ancestors []string    `json:"ancestors"`
-	Shape     interface{} `json:"shape,omitempty"`
+	Id           string      `json:"id"`
+	Name         string      `json:"name"`
+	Type         string      `json:"type"`
+	AncestorsIds []string    `json:"ancestorsIds,omitempty"`
+	Ancestors    []location  `json:"ancestors,omitempty"`
+	Level        int         `json:"level"`
+	Shape        interface{} `json:"shape,omitempty"`
 }
 
 func parseParams(req *http.Request) (model.ReqOptions, error) {
@@ -61,31 +63,39 @@ func getInt(req *http.Request, key string) int {
 	return int(val)
 }
 
-func writeLocations(locations []model.Location, res http.ResponseWriter, p model.ReqOptions) error {
+func writeLocations(locations []*model.Location, res http.ResponseWriter, p model.ReqOptions) error {
 	responseLocations := make([]location, len(locations))
 	for i, loc := range locations {
+
+		l := location{
+			Id:           loc.Id,
+			Name:         loc.Name,
+			Type:         loc.TypeName,
+			Level:        loc.Level,
+			AncestorsIds: loc.AncestorsIds,
+		}
 
 		if p.Shapes {
 			locationShape, err := geojson.ToGeoJSON(loc.Shape.T)
 			if err != nil {
 				return err
 			}
+			l.Shape = locationShape
+		}
 
-			responseLocations[i] = location{
-				Id:        loc.Id,
-				Name:      loc.Name,
-				Type:      loc.TypeName,
-				Shape:     locationShape,
-				Ancestors: loc.AncestorsIds,
-			}
-		} else {
-			responseLocations[i] = location{
-				Id:        loc.Id,
-				Name:      loc.Name,
-				Type:      loc.TypeName,
-				Ancestors: loc.AncestorsIds,
+		if p.Ancestors {
+			l.Ancestors = make([]location, len(loc.Ancestors))
+			for i, anc := range loc.Ancestors {
+				l.Ancestors[i] = location{
+					Id:    anc.Id,
+					Name:  anc.Name,
+					Type:  anc.TypeName,
+					Level: anc.Level,
+				}
 			}
 		}
+
+		responseLocations[i] = l
 	}
 
 	enc := json.NewEncoder(res)

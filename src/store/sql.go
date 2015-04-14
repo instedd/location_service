@@ -47,13 +47,13 @@ func (self sqlStore) AddLocation(location *model.Location) error {
 	return err
 }
 
-func (self sqlStore) FindLocationsByPoint(x, y float64, opts model.ReqOptions) ([]model.Location, error) {
+func (self sqlStore) FindLocationsByPoint(x, y float64, opts model.ReqOptions) ([]*model.Location, error) {
 	return self.doQuery("l.leaf = TRUE AND ST_Within(ST_SetSRID(ST_Point($1, $2), 4326), l.shape)", opts, x, y)
 }
 
-func (self sqlStore) FindLocationsByIds(ids []string, opts model.ReqOptions) ([]model.Location, error) {
+func (self sqlStore) FindLocationsByIds(ids []string, opts model.ReqOptions) ([]*model.Location, error) {
 	if len(ids) == 0 {
-		return make([]model.Location, 0), nil
+		return make([]*model.Location, 0), nil
 	}
 
 	placeholders := placeholdersFor(ids, 0)
@@ -61,35 +61,25 @@ func (self sqlStore) FindLocationsByIds(ids []string, opts model.ReqOptions) ([]
 	return self.doQuery(fmt.Sprintf("l.id IN (%s)", placeholders), opts, args...)
 }
 
-func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOptions) ([]model.Location, error) {
+func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOptions) ([]*model.Location, error) {
 	opts.Ancestors = false
 	return self.doQuery("l.parent_id = $1", opts, parentId)
 }
 
-func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]model.Location, error) {
+func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]*model.Location, error) {
 	return self.doQuery(`l.name LIKE ($1 || '%')`, opts, name)
 }
 
-func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs ...interface{}) ([]model.Location, error) {
+func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs ...interface{}) ([]*model.Location, error) {
 	var query string
 	setPredicate, setArgs := setFor(opts, len(queryArgs))
 	scope, scopeArgs := scopeFor(opts, len(queryArgs)+len(setArgs))
 
-	if opts.Ancestors {
-		query = fmt.Sprintf(`
-				SELECT DISTINCT %s
-				FROM locations AS l
-					INNER JOIN locations as t
-					ON t.id = ANY(l.ancestors_ids) OR t.id = l.id
-				WHERE %s%s%s
-				ORDER BY t.id%s`, fieldsFor(opts, "t"), predicate, setPredicate, scope, pagingFor(opts))
-	} else {
-		query = fmt.Sprintf(`
-				SELECT %s
-				FROM locations AS l
-				WHERE %s%s%s
-				ORDER BY l.id%s`, fieldsFor(opts, "l"), predicate, setPredicate, scope, pagingFor(opts))
-	}
+	query = fmt.Sprintf(`
+		SELECT %s
+		FROM locations AS l
+		WHERE %s%s%s
+		ORDER BY l.id%s`, fieldsFor(opts, "l"), predicate, setPredicate, scope, pagingFor(opts))
 
 	args := append(queryArgs, setArgs...)
 	args = append(args, scopeArgs...)
@@ -103,7 +93,65 @@ func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs 
 		return nil, err
 	}
 
-	return readLocations(rows, opts)
+	locations, err := readLocations(rows, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if opts.Ancestors {
+		return self.addAncestors(locations, opts)
+	} else {
+		return locations, nil
+	}
+
+}
+
+func (self sqlStore) addAncestors(locations []*model.Location, opts model.ReqOptions) ([]*model.Location, error) {
+	ancestors := make(map[string](*model.Location))
+	for _, location := range locations {
+		for _, ancestorId := range location.AncestorsIds {
+			ancestors[ancestorId] = nil
+		}
+	}
+
+	ancestorIds := make([]string, 0, len(ancestors))
+	for ancestorId := range ancestors {
+		ancestorIds = append(ancestorIds, ancestorId)
+	}
+
+	placeholders := placeholdersFor(ancestorIds, 0)
+	args := argsFor(ancestorIds)
+
+	ancestorOpts := opts
+	ancestorOpts.Ancestors = false
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM locations AS l
+		WHERE l.id IN (%s)
+		ORDER BY l.id`, fieldsFor(ancestorOpts, "l"), placeholders)
+
+	rows, err := self.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	ancestorsList, err := readLocations(rows, ancestorOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ancestor := range ancestorsList {
+		ancestors[(*ancestor).Id] = ancestor
+	}
+
+	for _, location := range locations {
+		location.Ancestors = make([]*model.Location, 0, len(location.AncestorsIds))
+		for _, ancestorId := range (*location).AncestorsIds {
+			location.Ancestors = append(location.Ancestors, ancestors[ancestorId])
+		}
+	}
+
+	return locations, nil
 }
 
 func setFor(opts model.ReqOptions, argsBase int) (string, []interface{}) {
@@ -115,7 +163,7 @@ func setFor(opts model.ReqOptions, argsBase int) (string, []interface{}) {
 }
 
 func fieldsFor(opts model.ReqOptions, alias string) string {
-	fields := fmt.Sprintf(`%s.id, %s.parent_id, %s.name, %s.type_name, %s.ancestors_ids`, alias, alias, alias, alias, alias)
+	fields := fmt.Sprintf(`%s.id, %s.parent_id, %s.name, %s.type_name, %s.level, %s.ancestors_ids`, alias, alias, alias, alias, alias, alias)
 	if opts.Shapes {
 		fields = fmt.Sprintf(`%s, ST_AsBinary(%s.shape) as binshape`, fields, alias)
 	}
@@ -140,24 +188,24 @@ func scopeFor(opts model.ReqOptions, argsBase int) (string, []interface{}) {
 	}
 }
 
-func readLocations(rows *sql.Rows, opts model.ReqOptions) ([]model.Location, error) {
-	locations := make([]model.Location, 0, 20)
+func readLocations(rows *sql.Rows, opts model.ReqOptions) ([]*model.Location, error) {
+	locations := make([]*model.Location, 0, 20)
 
 	for rows.Next() {
 		var location model.Location
-
 		var err error
+
 		if opts.Shapes {
-			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.AncestorsIds, &location.Shape)
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.Level, &location.AncestorsIds, &location.Shape)
 		} else {
-			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.AncestorsIds)
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.Level, &location.AncestorsIds)
 		}
 
 		if err != nil {
 			return nil, err
 		}
 
-		locations = append(locations, location)
+		locations = append(locations, &location)
 	}
 
 	return locations, nil
