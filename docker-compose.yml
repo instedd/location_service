@@ -1,0 +1,11 @@
+db:
+  image: postgres
+  environment:
+    POSTGRES_PASSWORD: root
+
+api:
+  build: .
+  links:
+    - db
+  ports:
+    - 8080

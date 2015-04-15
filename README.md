@@ -48,7 +48,7 @@ Returns the details of all the locations requested by id.
 
 ### /children
 
-Returns the direct children of the specified location.
+Returns the direct children of the specified location, or all roots if no parent location is specified.
 
 - `id` string
 

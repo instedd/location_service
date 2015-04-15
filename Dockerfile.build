@@ -1,0 +1,8 @@
+FROM golang
+
+ADD deps/src  /app/deps/src
+ADD Makefile  /app/Makefile
+ADD src       /app/src/
+
+WORKDIR /app
+CMD ["make", "all"]
