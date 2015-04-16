@@ -12,5 +12,5 @@ type Store interface {
 	FindLocationsByParent(id string, opts model.ReqOptions) ([]*model.Location, error)
 	FindLocationsByName(name string, opts model.ReqOptions) ([]*model.Location, error)
 	Flush()
-	Finish()
+	Finish() error
 }

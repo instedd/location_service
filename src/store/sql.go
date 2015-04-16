@@ -168,7 +168,8 @@ func setFor(opts model.ReqOptions, argsBase int) (string, []interface{}) {
 }
 
 func fieldsFor(opts model.ReqOptions, alias string) string {
-	fields := fmt.Sprintf(`%s.id, %s.parent_id, %s.name, %s.type_name, %s.level, %s.ancestors_ids`, alias, alias, alias, alias, alias, alias)
+	fields := fmt.Sprintf(`%s.id, %s.parent_id, %s.name, %s.type_name, %s.level, ST_AsBinary(%s.center::geometry) as bincenter, %s.ancestors_ids`,
+		alias, alias, alias, alias, alias, alias, alias)
 	if opts.Shapes {
 		fields = fmt.Sprintf(`%s, ST_AsBinary(%s.shape) as binshape`, fields, alias)
 	}
@@ -201,9 +202,9 @@ func readLocations(rows *sql.Rows, opts model.ReqOptions) ([]*model.Location, er
 		var err error
 
 		if opts.Shapes {
-			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.Level, &location.AncestorsIds, &location.Shape)
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.Level, &location.Center, &location.AncestorsIds, &location.Shape)
 		} else {
-			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.Level, &location.AncestorsIds)
+			err = rows.Scan(&location.Id, &location.ParentId, &location.Name, &location.TypeName, &location.Level, &location.Center, &location.AncestorsIds)
 		}
 
 		if err != nil {
@@ -243,6 +244,13 @@ func (self sqlStore) Begin() Store {
 func (self sqlStore) Flush() {
 }
 
-func (self sqlStore) Finish() {
-	self.db.Exec("UPDATE locations SET leaf = NOT EXISTS (SELECT 1 FROM locations l2 WHERE l2.parent_id = locations.id)")
+func (self sqlStore) Finish() error {
+	var err error
+	_, err = self.db.Exec("UPDATE locations SET leaf = NOT EXISTS (SELECT 1 FROM locations l2 WHERE l2.parent_id = locations.id)")
+	if err != nil {
+		return err
+	}
+
+	_, err = self.db.Exec("UPDATE locations SET center = ST_PointOnSurface(shape)::point WHERE center IS NULL AND shape IS NOT NULL")
+	return err
 }

@@ -57,7 +57,10 @@ func main() {
 	}
 
 	fmt.Printf("\nRunning final update on all imported data\n")
-	db.Finish()
+	err = db.Finish()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func loadSourceSettings(file string, source string, defaultId *string, idFields *[]string, nameField *string, typeName *string, typeField *string, plevel *int) {

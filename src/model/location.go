@@ -8,5 +8,6 @@ type Location struct {
 	Level        int
 	TypeName     string
 	Name         string
+	Center       GeoShape
 	Shape        GeoShape
 }

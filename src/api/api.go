@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/foobaz/geom"
 	"github.com/foobaz/geom/encoding/geojson"
 	"model"
 	"net/http"
@@ -40,6 +41,8 @@ type location struct {
 	AncestorsIds []string    `json:"ancestorsIds,omitempty"`
 	Ancestors    []location  `json:"ancestors,omitempty"`
 	Level        int         `json:"level"`
+	Lat          float64     `json:"lat"`
+	Lng          float64     `json:"lng"`
 	Shape        interface{} `json:"shape,omitempty"`
 }
 
@@ -74,12 +77,16 @@ func writeLocations(locations []*model.Location, res http.ResponseWriter, p mode
 	responseLocations := make([]location, len(locations))
 	for i, loc := range locations {
 
+		point := loc.Center.T.(geom.Point)
+
 		l := location{
 			Id:           loc.Id,
 			Name:         loc.Name,
 			Type:         loc.TypeName,
 			Level:        loc.Level,
 			AncestorsIds: loc.AncestorsIds,
+			Lat:          point[1],
+			Lng:          point[0],
 		}
 
 		if p.Shapes {

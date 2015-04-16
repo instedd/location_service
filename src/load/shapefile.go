@@ -76,7 +76,8 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 
 		err = store.AddLocation(dbLocation)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err.Error())
+			continue
 		}
 
 	}
