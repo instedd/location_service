@@ -43,6 +43,7 @@ type location struct {
 	Level        int         `json:"level"`
 	Lat          float64     `json:"lat"`
 	Lng          float64     `json:"lng"`
+	Set          string      `json:"set"`
 	Shape        interface{} `json:"shape,omitempty"`
 }
 
@@ -78,6 +79,7 @@ func writeLocations(locations []*model.Location, res http.ResponseWriter, p mode
 	for i, loc := range locations {
 
 		point := loc.Center.T.(geom.Point)
+		set := strings.Split(loc.Id, ":")[0]
 
 		l := location{
 			Id:           loc.Id,
@@ -85,6 +87,7 @@ func writeLocations(locations []*model.Location, res http.ResponseWriter, p mode
 			Type:         loc.TypeName,
 			Level:        loc.Level,
 			AncestorsIds: loc.AncestorsIds,
+			Set:          set,
 			Lat:          point[1],
 			Lng:          point[0],
 		}
