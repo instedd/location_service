@@ -112,6 +112,10 @@ func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs 
 }
 
 func (self sqlStore) addAncestors(locations []*model.Location, opts model.ReqOptions) ([]*model.Location, error) {
+	if len(locations) == 0 {
+		return locations, nil
+	}
+
 	ancestors := make(map[string](*model.Location))
 	for _, location := range locations {
 		for _, ancestorId := range location.AncestorsIds {
