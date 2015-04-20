@@ -123,34 +123,36 @@ func (self sqlStore) addAncestors(locations []*model.Location, opts model.ReqOpt
 		}
 	}
 
-	ancestorIds := make([]string, 0, len(ancestors))
-	for ancestorId := range ancestors {
-		ancestorIds = append(ancestorIds, ancestorId)
-	}
+	if len(ancestors) > 0 {
+		ancestorIds := make([]string, 0, len(ancestors))
+		for ancestorId := range ancestors {
+			ancestorIds = append(ancestorIds, ancestorId)
+		}
 
-	placeholders := placeholdersFor(ancestorIds, 0)
-	args := argsFor(ancestorIds)
+		placeholders := placeholdersFor(ancestorIds, 0)
+		args := argsFor(ancestorIds)
 
-	ancestorOpts := opts
-	ancestorOpts.Ancestors = false
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM locations AS l
-		WHERE l.id IN (%s)
-		ORDER BY l.id`, fieldsFor(ancestorOpts, "l"), placeholders)
+		ancestorOpts := opts
+		ancestorOpts.Ancestors = false
+		query := fmt.Sprintf(`
+			SELECT %s
+			FROM locations AS l
+			WHERE l.id IN (%s)
+			ORDER BY l.id`, fieldsFor(ancestorOpts, "l"), placeholders)
 
-	rows, err := self.db.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
+		rows, err := self.db.Query(query, args...)
+		if err != nil {
+			return nil, err
+		}
 
-	ancestorsList, err := readLocations(rows, ancestorOpts)
-	if err != nil {
-		return nil, err
-	}
+		ancestorsList, err := readLocations(rows, ancestorOpts)
+		if err != nil {
+			return nil, err
+		}
 
-	for _, ancestor := range ancestorsList {
-		ancestors[(*ancestor).Id] = ancestor
+		for _, ancestor := range ancestorsList {
+			ancestors[(*ancestor).Id] = ancestor
+		}
 	}
 
 	for _, location := range locations {
