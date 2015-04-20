@@ -31,8 +31,8 @@ goose:
 	go get bitbucket.org/liamstask/goose/cmd/goose
 
 docker: get-deps
-	mkdir etc/debian
-	docker build -f Dockerfile.build -t instedd/location_service-builder
+	mkdir -p etc/debian
+	docker build -f Dockerfile.build -t instedd/location_service-builder .
 	docker run --rm -v $(shell pwd)/etc/debian:/app/bin instedd/location_service-builder
 	echo $(VERSION) > etc/debian/VERSION
 	docker build --tag $(DOCKERTAG):$(VERSION) .
