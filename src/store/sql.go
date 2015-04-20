@@ -72,7 +72,7 @@ func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOption
 }
 
 func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]*model.Location, error) {
-	return self.doQuery(`l.name LIKE ($1 || '%')`, opts, name)
+	return self.doQuery(`l.name ILIKE ($1 || '%')`, opts, name)
 }
 
 func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs ...interface{}) ([]*model.Location, error) {
