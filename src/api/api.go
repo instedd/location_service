@@ -54,6 +54,7 @@ func parseParams(req *http.Request) (model.ReqOptions, error) {
 	p.Limit = getInt(req, "limit")
 	p.Offset = getInt(req, "offset")
 	p.Set = req.URL.Query().Get("set")
+	p.Object = req.URL.Query().Get("object")
 
 	if len(req.URL.Query().Get("scope")) > 0 {
 		p.Scope = strings.Split(req.URL.Query().Get("scope"), ",")
@@ -75,51 +76,64 @@ func getInt(req *http.Request, key string) int {
 }
 
 func writeLocations(locations []*model.Location, res http.ResponseWriter, p model.ReqOptions) error {
-	responseLocations := make([]location, len(locations))
-	for i, loc := range locations {
+	var err error
+	enc := json.NewEncoder(res)
 
-		point := loc.Center.T.(geom.Point)
-		set := strings.Split(loc.Id, ":")[0]
-
-		l := location{
-			Id:           loc.Id,
-			Name:         loc.Name,
-			Type:         loc.TypeName,
-			Level:        loc.Level,
-			AncestorsIds: loc.AncestorsIds,
-			Set:          set,
-			Lat:          point[1],
-			Lng:          point[0],
+	if len(p.Object) > 0 {
+		responseLocations := make(map[string](*location))
+		for _, loc := range locations {
+			responseLocations[loc.Id] = buildLocation(loc, p)
 		}
-
-		if p.Shapes {
-			locationShape, err := geojson.ToGeoJSON(loc.Shape.T)
-			if err != nil {
-				return err
-			}
-			l.Shape = locationShape
+		responseObject := make(map[string](*map[string](*location)))
+		responseObject[p.Object] = &responseLocations
+		err = enc.Encode(responseObject)
+	} else {
+		responseLocations := make([]*location, len(locations))
+		for i, loc := range locations {
+			responseLocations[i] = buildLocation(loc, p)
 		}
-
-		if p.Ancestors {
-			l.Ancestors = make([]location, len(loc.Ancestors))
-			for i, anc := range loc.Ancestors {
-				l.Ancestors[i] = location{
-					Id:    anc.Id,
-					Name:  anc.Name,
-					Type:  anc.TypeName,
-					Level: anc.Level,
-				}
-			}
-		}
-
-		responseLocations[i] = l
+		err = enc.Encode(responseLocations)
 	}
 
-	enc := json.NewEncoder(res)
-	err := enc.Encode(responseLocations)
 	if err != nil {
 		return err
 	}
-
 	return nil
+}
+
+func buildLocation(loc *model.Location, p model.ReqOptions) *location {
+	point := loc.Center.T.(geom.Point)
+	set := strings.Split(loc.Id, ":")[0]
+
+	l := location{
+		Id:           loc.Id,
+		Name:         loc.Name,
+		Type:         loc.TypeName,
+		Level:        loc.Level,
+		AncestorsIds: loc.AncestorsIds,
+		Set:          set,
+		Lat:          point[1],
+		Lng:          point[0],
+	}
+
+	if p.Shapes {
+		locationShape, err := geojson.ToGeoJSON(loc.Shape.T)
+		if err == nil {
+			l.Shape = locationShape
+		}
+	}
+
+	if p.Ancestors {
+		l.Ancestors = make([]location, len(loc.Ancestors))
+		for i, anc := range loc.Ancestors {
+			l.Ancestors[i] = location{
+				Id:    anc.Id,
+				Name:  anc.Name,
+				Type:  anc.TypeName,
+				Level: anc.Level,
+			}
+		}
+	}
+
+	return &l
 }

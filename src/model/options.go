@@ -6,5 +6,6 @@ type ReqOptions struct {
 	Offset    int
 	Limit     int
 	Set       string
+	Object    string
 	Scope     []string
 }
