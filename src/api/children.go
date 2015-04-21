@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"store"
 )
 
 func childrenHandler(res http.ResponseWriter, req *http.Request) {
@@ -17,7 +16,7 @@ func childrenHandler(res http.ResponseWriter, req *http.Request) {
 	parentId := req.URL.Query().Get("id")
 	p, _ := parseParams(req)
 
-	locations, err := db.FindLocationsByParent(parentId, p)
+	locations, err := (*db).FindLocationsByParent(parentId, p)
 	if err != nil {
 		log.Fatal(err)
 	}

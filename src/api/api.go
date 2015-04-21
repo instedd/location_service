@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+var db *store.Store
+
 func main() {
 	var port int
 	var debug bool
@@ -25,6 +27,12 @@ func main() {
 		store.SetDebug(true)
 	}
 
+	store, err := store.NewSqlStore()
+	if err != nil {
+		panic(err)
+	}
+
+	db = &store
 	addr := fmt.Sprintf(":%d", port)
 
 	http.HandleFunc("/lookup", lookupHandler)

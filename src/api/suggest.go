@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"store"
 )
 
 func suggestHandler(res http.ResponseWriter, req *http.Request) {
@@ -17,7 +16,7 @@ func suggestHandler(res http.ResponseWriter, req *http.Request) {
 	name := req.URL.Query().Get("name")
 	p, _ := parseParams(req)
 
-	locations, err := db.FindLocationsByName(name, p)
+	locations, err := (*db).FindLocationsByName(name, p)
 	if err != nil {
 		log.Fatal(err)
 	}
