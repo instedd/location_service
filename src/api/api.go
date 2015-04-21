@@ -83,6 +83,12 @@ func getInt(req *http.Request, key string) int {
 	return int(val)
 }
 
+func addHeaders(res http.ResponseWriter, req *http.Request) {
+	res.Header().Add("Server", "location service")
+	res.Header().Add("Access-Control-Allow-Origin", "*")
+	res.Header().Add("Access-Control-Allow-Headers", req.Header.Get("Access-Control-Request-Headers"))
+}
+
 func writeLocations(locations []*model.Location, res http.ResponseWriter, p model.ReqOptions) error {
 	var err error
 	enc := json.NewEncoder(res)

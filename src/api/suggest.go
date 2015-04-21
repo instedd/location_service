@@ -6,12 +6,7 @@ import (
 )
 
 func suggestHandler(res http.ResponseWriter, req *http.Request) {
-	res.Header().Add("Server", "location service")
-	res.Header().Add("Access-Control-Allow-Origin", "*")
-	db, err := store.NewSqlStore()
-	if err != nil {
-		log.Fatal(err)
-	}
+	addHeaders(res, req)
 
 	name := req.URL.Query().Get("name")
 	p, _ := parseParams(req)
