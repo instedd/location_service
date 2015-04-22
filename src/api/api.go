@@ -59,6 +59,7 @@ func parseParams(req *http.Request) (model.ReqOptions, error) {
 	var p model.ReqOptions
 	p.Ancestors = getBool(req, "ancestors")
 	p.Shapes = getBool(req, "shapes")
+	p.Simplify = getFloat(req, "simplify")
 	p.Limit = getInt(req, "limit")
 	p.Offset = getInt(req, "offset")
 	p.Set = req.URL.Query().Get("set")
@@ -81,6 +82,11 @@ func getBool(req *http.Request, key string) bool {
 func getInt(req *http.Request, key string) int {
 	val, _ := strconv.ParseInt(req.URL.Query().Get(key), 0, 32)
 	return int(val)
+}
+
+func getFloat(req *http.Request, key string) float32 {
+	val, _ := strconv.ParseFloat(req.URL.Query().Get(key), 32)
+	return float32(val)
 }
 
 func addHeaders(res http.ResponseWriter, req *http.Request) {

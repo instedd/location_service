@@ -177,7 +177,11 @@ func fieldsFor(opts model.ReqOptions, alias string) string {
 	fields := fmt.Sprintf(`%s.id, %s.parent_id, %s.name, %s.type_name, %s.level, ST_AsBinary(%s.center::geometry) as bincenter, %s.ancestors_ids`,
 		alias, alias, alias, alias, alias, alias, alias)
 	if opts.Shapes {
-		fields = fmt.Sprintf(`%s, ST_AsBinary(%s.shape) as binshape`, fields, alias)
+		if opts.Simplify > 0.0 {
+			fields = fmt.Sprintf(`%s, ST_AsBinary(ST_SimplifyPreserveTopology(%s.shape::geometry, %f)) as binshape`, fields, alias, opts.Simplify)
+		} else {
+			fields = fmt.Sprintf(`%s, ST_AsBinary(%s.shape) as binshape`, fields, alias)
+		}
 	}
 	return fields
 }
