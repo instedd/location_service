@@ -75,6 +75,10 @@ func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]
 	return self.doQuery(`l.name ILIKE ($1 || '%')`, opts, name)
 }
 
+func (self sqlStore) FindLocations(opts model.ReqOptions) ([]*model.Location, error) {
+	return self.doQuery("1=1", opts)
+}
+
 func (self sqlStore) doQuery(predicate string, opts model.ReqOptions, queryArgs ...interface{}) ([]*model.Location, error) {
 	var query string
 	setPredicate, setArgs := setFor(opts, len(queryArgs))
@@ -134,6 +138,7 @@ func (self sqlStore) addAncestors(locations []*model.Location, opts model.ReqOpt
 
 		ancestorOpts := opts
 		ancestorOpts.Ancestors = false
+		ancestorOpts.Shapes = false
 		query := fmt.Sprintf(`
 			SELECT %s
 			FROM locations AS l

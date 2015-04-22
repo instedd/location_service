@@ -39,6 +39,7 @@ func main() {
 	http.HandleFunc("/details", detailsHandler)
 	http.HandleFunc("/children", childrenHandler)
 	http.HandleFunc("/suggest", suggestHandler)
+	http.HandleFunc("/list", listHandler)
 	http.ListenAndServe(addr, nil)
 }
 
