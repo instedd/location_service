@@ -18,7 +18,7 @@ Data can be imported from multiple data sources via the executable `bin/importer
 The following data sources are currently supported:
 
 * GADM shapefiles
-* Natural Earth shapefiles
+* Natural Earth shapefiles (can be downloaded and imported automatically via `make download-ne`)
 
 ## API
 

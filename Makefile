@@ -39,3 +39,13 @@ docker: get-deps
 
 docker-push: docker
 	docker push $(DOCKERTAG):$(VERSION)
+
+download-ne: download-ne-0_countries download-ne-1_states_provinces
+
+download-ne-%: importer
+	mkdir -p tmp/data
+
+	@echo "Downloading NE $*"
+	curl -s http://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_$*.zip > tmp/data/ne_110m_admin_$*.zip
+	unzip -qo tmp/data/ne_110m_admin_$*.zip -d tmp/data
+	bin/importer -source ne tmp/data/ne_110m_admin_$*.shp

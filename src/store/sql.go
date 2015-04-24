@@ -280,31 +280,31 @@ func (self sqlStore) Finish() error {
 }
 
 func (self sqlStore) setLeaf() error {
-	fmt.Printf("\n Setting leaf parameter on all locations\n")
+	fmt.Printf(" Setting leaf parameter on all locations\n")
 	_, err := self.db.Exec("UPDATE locations SET leaf = NOT EXISTS (SELECT 1 FROM locations l2 WHERE l2.parent_id = locations.id)")
 	return err
 }
 
 func (self sqlStore) setCenter() error {
-	fmt.Printf("\n Setting center on all locations\n")
+	fmt.Printf(" Setting center on all locations\n")
 	_, err := self.db.Exec("UPDATE locations SET center = ST_PointOnSurface(shape)::point WHERE center IS NULL AND shape IS NOT NULL")
 	return err
 }
 
 func (self sqlStore) setSimpleShapes() error {
-	fmt.Printf("\n Simplifying overly complex shapes\n")
+	fmt.Printf(" Simplifying overly complex shapes\n")
 	_, err := self.db.Exec("UPDATE locations SET simple_shape = ST_SimplifyPreserveTopology(shape::geometry, 0.01) WHERE simple_shape IS NULL AND shape IS NOT NULL AND ST_NPoints(shape) > 1000000")
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("\n Simplifying slightly complex shapes\n")
+	fmt.Printf(" Simplifying slightly complex shapes\n")
 	_, err = self.db.Exec("UPDATE locations SET simple_shape = ST_SimplifyPreserveTopology(shape::geometry, 0.001) WHERE simple_shape IS NULL AND shape IS NOT NULL AND ST_NPoints(shape) > 100000")
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("\n Copying shapes when already simple\n")
+	fmt.Printf(" Copying shapes when already simple\n")
 	_, err = self.db.Exec("UPDATE locations SET simple_shape = shape WHERE simple_shape IS NULL AND shape IS NOT NULL")
 	return err
 }

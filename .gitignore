@@ -2,3 +2,4 @@ bin/
 deps/
 pkg/
 etc/debian
+tmp/
