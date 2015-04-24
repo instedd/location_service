@@ -98,11 +98,12 @@ func findFieldColumn(fields []shp.Field, name string) int {
 		return -1
 	}
 
-	var nameBytes [11]byte
-	copy(nameBytes[:], []byte(name))
+	var upperNameBytes, lowerNameBytes [11]byte
+	copy(upperNameBytes[:], []byte(strings.ToUpper(name)))
+	copy(lowerNameBytes[:], []byte(strings.ToLower(name)))
 
 	for idx, f := range fields {
-		if f.Name == nameBytes {
+		if f.Name == upperNameBytes || f.Name == lowerNameBytes {
 			return idx
 		}
 	}
