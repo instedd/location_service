@@ -9,7 +9,9 @@ InSTEDD Location Service hosts locations information from different sources, and
 
 ## Database
 
-The service uses a PostgreSQL backend that is configured in `db/dbconf.yml`. Default database name is `location_service`. Migrations are managed via [goose](https://bitbucket.org/liamstask/goose), and are executed by running `bin/goose up`.
+The service uses a PostgreSQL backend that is configured in `db/dbconf.yml`. Default database name is `location_service`. Migrations are managed via [goose](https://bitbucket.org/liamstask/goose), and are executed by running `bin/goose up`. The database needs to be created manually.
+
+Goose uses [postgis](http://postgis.net/).
 
 ## Import
 
