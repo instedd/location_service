@@ -33,6 +33,7 @@ All endpoints can be invoked with the following optional parameters:
 * `scope` string (none), all results will be limited to the locations specified in this parameter and their descendants; for example, querying for names beginning with `Ca` with `scope=gadm:USA,gadm:MEX` will return _California_ but not _Catamarca_
 * `set` string (none), which locations set to query; for example, if a server contains both GADM and NaturalEarth data, the search can be restricted to the latter by specifying `set=ne`.
 * `object` string (none), if set, will return a map of locations, indexed by their ids, nested within the key with name `object`, useful for supplying locations with the format expected by [notifiable-diseases](github.com/instedd/notifiable-diseases); if not set, will return an array
+* `simplify` float (none), if set, shapes will be dynamically simplified using this value as tolerance (higher values imply a higher simplification); note that this is an expensive operation to perform, and overly complex shapes are already cached in a simplified version, so this parameter is often unneeded
 
 ### /lookup
 

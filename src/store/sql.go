@@ -185,7 +185,7 @@ func fieldsFor(opts model.ReqOptions, alias string) string {
 		if opts.Simplify > 0.0 {
 			fields = fmt.Sprintf(`%s, ST_AsBinary(ST_SimplifyPreserveTopology(%s.shape::geometry, %f)) as binshape`, fields, alias, opts.Simplify)
 		} else {
-			fields = fmt.Sprintf(`%s, ST_AsBinary(%s.shape) as binshape`, fields, alias)
+			fields = fmt.Sprintf(`%s, ST_AsBinary(%s.simple_shape) as binshape`, fields, alias)
 		}
 	}
 	return fields
@@ -261,11 +261,50 @@ func (self sqlStore) Flush() {
 
 func (self sqlStore) Finish() error {
 	var err error
-	_, err = self.db.Exec("UPDATE locations SET leaf = NOT EXISTS (SELECT 1 FROM locations l2 WHERE l2.parent_id = locations.id)")
+	err = self.setLeaf()
 	if err != nil {
 		return err
 	}
 
-	_, err = self.db.Exec("UPDATE locations SET center = ST_PointOnSurface(shape)::point WHERE center IS NULL AND shape IS NOT NULL")
+	err = self.setCenter()
+	if err != nil {
+		return err
+	}
+
+	err = self.setSimpleShapes()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (self sqlStore) setLeaf() error {
+	fmt.Printf("\n Setting leaf parameter on all locations\n")
+	_, err := self.db.Exec("UPDATE locations SET leaf = NOT EXISTS (SELECT 1 FROM locations l2 WHERE l2.parent_id = locations.id)")
+	return err
+}
+
+func (self sqlStore) setCenter() error {
+	fmt.Printf("\n Setting center on all locations\n")
+	_, err := self.db.Exec("UPDATE locations SET center = ST_PointOnSurface(shape)::point WHERE center IS NULL AND shape IS NOT NULL")
+	return err
+}
+
+func (self sqlStore) setSimpleShapes() error {
+	fmt.Printf("\n Simplifying overly complex shapes\n")
+	_, err := self.db.Exec("UPDATE locations SET simple_shape = ST_SimplifyPreserveTopology(shape::geometry, 0.01) WHERE simple_shape IS NULL AND shape IS NOT NULL AND ST_NPoints(shape) > 1000000")
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\n Simplifying slightly complex shapes\n")
+	_, err = self.db.Exec("UPDATE locations SET simple_shape = ST_SimplifyPreserveTopology(shape::geometry, 0.001) WHERE simple_shape IS NULL AND shape IS NOT NULL AND ST_NPoints(shape) > 100000")
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\n Copying shapes when already simple\n")
+	_, err = self.db.Exec("UPDATE locations SET simple_shape = shape WHERE simple_shape IS NULL AND shape IS NOT NULL")
 	return err
 }
