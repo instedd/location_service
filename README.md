@@ -59,3 +59,8 @@ Returns the direct children of the specified location, or all roots if no parent
 Returns all locations with a name that matches the supplied prefix.
 
 - `name` string
+
+### /list
+
+Returns all locations in the service
+
