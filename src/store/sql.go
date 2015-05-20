@@ -4,6 +4,8 @@ import (
   "bitbucket.org/liamstask/goose/lib/goose"
 	"database/sql"
 	"fmt"
+  "os"
+  "path/filepath"
 	_ "github.com/lib/pq"
 	"model"
 	"strings"
@@ -16,7 +18,12 @@ type sqlStore struct {
 }
 
 func NewSqlStore() (Store, error) {
-  dbconf, err := goose.NewDBConf("../../db", "development", "")
+  working_dir, err := os.Getwd()
+  if err != nil {
+    return nil, err
+  }
+
+  dbconf, err := goose.NewDBConf(filepath.Join(working_dir, "db"), "development", "")
   if err != nil {
     return nil, err
   }
