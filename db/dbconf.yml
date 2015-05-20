@@ -1,3 +1,4 @@
 development:
   driver: postgres
   open: dbname=location_service sslmode=disable
+  # open: host=$DB_PORT_5432_TCP_ADDR dbname=location_service sslmode=disable user=postgres password=root

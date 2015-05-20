@@ -1,6 +1,7 @@
 package store
 
 import (
+  "bitbucket.org/liamstask/goose/lib/goose"
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
@@ -15,7 +16,12 @@ type sqlStore struct {
 }
 
 func NewSqlStore() (Store, error) {
-	db, err := sql.Open("postgres", "dbname=location_service sslmode=disable")
+  dbconf, err := goose.NewDBConf("../../db", "development", "")
+  if err != nil {
+    return nil, err
+  }
+
+  db, err := sql.Open(dbconf.Driver.Name, dbconf.Driver.OpenStr)
 	if err != nil {
 		return nil, err
 	}

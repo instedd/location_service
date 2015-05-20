@@ -1,7 +1,9 @@
 db:
-  image: postgres
+  image: thatpanda/postgis
   environment:
-    POSTGRES_PASSWORD: root
+    USER: postgres
+    PASS: root
+    DB: location_service
 
 api:
   build: .
@@ -9,3 +11,6 @@ api:
     - db
   ports:
     - 8080
+  volumes:
+    - 'log:/var/log'
+    - 'db/dbconf.yml:db/dbconf.yml'

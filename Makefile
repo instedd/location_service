@@ -31,14 +31,13 @@ goose:
 	go get bitbucket.org/liamstask/goose/cmd/goose
 
 docker: get-deps
-	mkdir -p etc/debian
-	docker build -f Dockerfile.build -t instedd/location_service-builder .
-	docker run --rm -v $(shell pwd)/etc/debian:/app/bin instedd/location_service-builder
-	echo $(VERSION) > etc/debian/VERSION
+	echo $(VERSION) > VERSION
 	docker build --tag $(DOCKERTAG):$(VERSION) .
+	docker build --tag $(DOCKERTAG) .
 
 docker-push: docker
 	docker push $(DOCKERTAG):$(VERSION)
+	docker push $(DOCKERTAG)
 
 download-ne: download-ne-0_countries download-ne-1_states_provinces
 
