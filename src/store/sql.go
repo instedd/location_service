@@ -1,13 +1,13 @@
 package store
 
 import (
-  "bitbucket.org/liamstask/goose/lib/goose"
+	"bitbucket.org/liamstask/goose/lib/goose"
 	"database/sql"
 	"fmt"
-  "os"
-  "path/filepath"
 	_ "github.com/lib/pq"
 	"model"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -18,17 +18,17 @@ type sqlStore struct {
 }
 
 func NewSqlStore() (Store, error) {
-  working_dir, err := os.Getwd()
-  if err != nil {
-    return nil, err
-  }
+	working_dir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
 
-  dbconf, err := goose.NewDBConf(filepath.Join(working_dir, "db"), "development", "")
-  if err != nil {
-    return nil, err
-  }
+	dbconf, err := goose.NewDBConf(filepath.Join(working_dir, "db"), "development", "")
+	if err != nil {
+		return nil, err
+	}
 
-  db, err := sql.Open(dbconf.Driver.Name, dbconf.Driver.OpenStr)
+	db, err := sql.Open(dbconf.Driver.Name, dbconf.Driver.OpenStr)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOption
 }
 
 func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]*model.Location, error) {
-	return self.doQuery(`l.name ILIKE ($1 || '%')`, opts, name)
+	return self.doQuery(`to_tsvector('location_name', l.name) @@ to_tsquery('location_name', quote_literal($1) || ':*')`, opts, name)
 }
 
 func (self sqlStore) FindLocations(opts model.ReqOptions) ([]*model.Location, error) {
