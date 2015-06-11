@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/foobaz/geom"
 	"github.com/foobaz/geom/encoding/geojson"
+	"log"
 	"model"
 	"net/http"
 	"store"
@@ -40,7 +41,9 @@ func main() {
 	http.HandleFunc("/children", childrenHandler)
 	http.HandleFunc("/suggest", suggestHandler)
 	http.HandleFunc("/list", listHandler)
-	http.ListenAndServe(addr, nil)
+
+	fmt.Printf("Starting on http://0.0.0.0:%d/\n", port)
+	http.ListenAndServe(addr, httpLog(http.DefaultServeMux))
 }
 
 type location struct {
@@ -54,6 +57,13 @@ type location struct {
 	Lng          float64     `json:"lng"`
 	Set          string      `json:"set"`
 	Shape        interface{} `json:"shape,omitempty"`
+}
+
+func httpLog(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
 }
 
 func parseParams(req *http.Request) (model.ReqOptions, error) {
