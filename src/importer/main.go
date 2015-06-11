@@ -75,7 +75,7 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 
 		if level == 0 {
 			*idFields = []string{"ISO"}
-			*nameField = "NAME_ENGLI"
+			*nameField = "NAME_ENGLISH"
 			*typeName = "Country"
 		} else {
 			*idFields = make([]string, level+1)
