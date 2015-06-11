@@ -169,7 +169,6 @@ func findFieldColumn(fields []string, name string) int {
 
 	for idx, f := range fields {
 		if strings.EqualFold(f, name) {
-			log.Println("Found it!")
 			return idx
 		}
 	}
