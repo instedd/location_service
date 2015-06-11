@@ -1,6 +1,7 @@
 package load
 
 import (
+	"bytes"
 	"encoding/csv"
 	"geom"
 	"github.com/jonas-p/go-shp"
@@ -9,9 +10,13 @@ import (
 	"model"
 	"os"
 	"path/filepath"
+	"regexp"
 	"store"
+	"strconv"
 	"strings"
 )
+
+var csvUnicodePattern, _ = regexp.Compile("<U\\+[0-9A-F]{4}>")
 
 func LoadShapefile(store store.Store, path string, set string, idColumns []string, nameColumn string, defaultTypeName string, typeColumn string, level int) {
 	shapefile, err := shp.Open(path)
@@ -22,7 +27,7 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 
 	// Load names from CSV file if exists
 	names := make(map[string](string))
-	csvPath := strings.Replace(path, filepath.Ext(path), "csv", 1)
+	csvPath := strings.Replace(path, filepath.Ext(path), ".csv", 1)
 	if _, err = os.Stat(csvPath); err == nil {
 		namesfile, err := os.Open(csvPath)
 		if err != nil {
@@ -39,9 +44,11 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 			csvIdColumnsIdx[i] = findFieldColumn(headers, col)
 		}
 
-		for err != io.EOF {
+		for {
 			record, err := csvReader.Read()
-			if err != nil {
+			if err == io.EOF {
+				break
+			} else if err != nil {
 				log.Fatal(err)
 				break
 			}
@@ -53,6 +60,10 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 			}
 			csvLocationId := set + ":" + strings.Join(csvIdParts, "_")
 			csvLocationName := record[csvNameIdx]
+			csvLocationName = csvUnicodePattern.ReplaceAllStringFunc(csvLocationName, func(str string) string {
+				ch, _ := strconv.ParseInt(str[3:7], 16, 0)
+				return string(ch)
+			})
 			names[csvLocationId] = csvLocationName
 		}
 	}
@@ -60,14 +71,14 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 	fields := shapefile.Fields()
 	fieldNames := make([]string, len(fields))
 	for i, field := range fields {
-		fieldNames[i] = string(field.Name[:])
+		fieldNames[i] = string(field.Name[:bytes.IndexByte(field.Name[:], 0)])
 	}
 
-	nameIdx := findFieldColumn(fieldNames, nameColumn)
-	typeIdx := findFieldColumn(fieldNames, typeColumn)
+	nameIdx := findFieldColumn(fieldNames, truncate(nameColumn, 10))
+	typeIdx := findFieldColumn(fieldNames, truncate(typeColumn, 10))
 	idColumnsIdx := make([]int, len(idColumns))
 	for i, col := range idColumns {
-		idColumnsIdx[i] = findFieldColumn(fieldNames, col)
+		idColumnsIdx[i] = findFieldColumn(fieldNames, truncate(col, 10))
 	}
 
 	for shapefile.Next() {
@@ -134,6 +145,14 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 
 }
 
+func truncate(str string, length int) string {
+	if len(str) > length {
+		return str[:length]
+	} else {
+		return str
+	}
+}
+
 func toUtf8(str string) string {
 	iso8859_1_buf := []byte(str)
 	buf := make([]rune, len(iso8859_1_buf))
@@ -148,11 +167,7 @@ func findFieldColumn(fields []string, name string) int {
 		return -1
 	}
 
-	// Go is always returning false for this comparison, so it never finds the field given its name
-	log.Println("Looking for: '" + toUtf8(name) + "'")
 	for idx, f := range fields {
-		log.Println("Field '" + toUtf8(f) + "' equals?")
-		log.Println(toUtf8(f) == toUtf8(name))
 		if strings.EqualFold(f, name) {
 			log.Println("Found it!")
 			return idx
