@@ -47,13 +47,14 @@ func main() {
 		var defaultId, nameField, typeName, typeField string
 		var idFields []string
 		var level int
-		loadSourceSettings(file, source, &defaultId, &idFields, &nameField, &typeName, &typeField, &level)
+		var nameAsUtf8 bool
+		loadSourceSettings(file, source, &defaultId, &idFields, &nameField, &nameAsUtf8, &typeName, &typeField, &level)
 		if id == "" {
 			id = defaultId
 		}
 
 		fmt.Printf("\nProcessing %s file %s:\n ID prefix: %s\n ID fields: %s\n Name field: %s\n Type name: %s\n Type field: %s\n Level: %d\n\n", source, file, id, idFields, nameField, typeName, typeField, level)
-		load.LoadShapefile(db, file, id, idFields, nameField, typeName, typeField, level)
+		load.LoadShapefile(db, file, id, idFields, nameField, nameAsUtf8, typeName, typeField, level)
 	}
 
 	fmt.Printf("\nRunning final update on all imported data\n")
@@ -63,7 +64,7 @@ func main() {
 	}
 }
 
-func loadSourceSettings(file string, source string, defaultId *string, idFields *[]string, nameField *string, typeName *string, typeField *string, plevel *int) {
+func loadSourceSettings(file string, source string, defaultId *string, idFields *[]string, nameField *string, nameAsUtf8 *bool, typeName *string, typeField *string, plevel *int) {
 	switch source {
 
 	case "gadm", "GADM":
@@ -72,6 +73,7 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 		match := gadmRegexp.FindStringSubmatch(file)
 		level, _ := strconv.Atoi(match[1])
 		*plevel = level
+		*nameAsUtf8 = false
 
 		if level == 0 {
 			*idFields = []string{"ISO"}
@@ -93,6 +95,7 @@ func loadSourceSettings(file string, source string, defaultId *string, idFields 
 		match := neRegexp.FindStringSubmatch(file)
 		level, _ := strconv.Atoi(match[1])
 		*plevel = level
+		*nameAsUtf8 = true
 
 		if level == 0 {
 			*idFields = []string{"ADM0_A3"}

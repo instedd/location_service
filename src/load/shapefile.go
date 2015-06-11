@@ -18,7 +18,7 @@ import (
 
 var csvUnicodePattern, _ = regexp.Compile("<U\\+[0-9A-F]{4}>")
 
-func LoadShapefile(store store.Store, path string, set string, idColumns []string, nameColumn string, defaultTypeName string, typeColumn string, level int) {
+func LoadShapefile(store store.Store, path string, set string, idColumns []string, nameColumn string, nameAsUtf8 bool, defaultTypeName string, typeColumn string, level int) {
 	shapefile, err := shp.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -110,7 +110,10 @@ func LoadShapefile(store store.Store, path string, set string, idColumns []strin
 		var locationName string
 		var found bool
 		if locationName, found = names[locationId]; !found {
-			locationName = toUtf8(shapefile.ReadAttribute(n, nameIdx))
+			locationName = shapefile.ReadAttribute(n, nameIdx)
+			if !nameAsUtf8 {
+				locationName = toUtf8(locationName)
+			}
 		}
 
 		typeName := defaultTypeName
