@@ -85,6 +85,9 @@ func (self sqlStore) FindLocationsByParent(parentId string, opts model.ReqOption
 }
 
 func (self sqlStore) FindLocationsByName(name string, opts model.ReqOptions) ([]*model.Location, error) {
+	if name == "" {
+		return self.FindLocations(opts)
+	}
 	return self.doQuery(`to_tsvector('location_name', l.name) @@ to_tsquery('location_name', quote_literal($1) || ':*')`, opts, name)
 }
 
