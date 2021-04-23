@@ -1,5 +1,5 @@
 # See https://github.com/phusion/baseimage-docker
-FROM phusion/baseimage
+FROM phusion/baseimage:focal-1.0.0-alpha1-amd64
 
 RUN apt-get update -y && apt-get install --no-install-recommends -y -q golang build-essential git unzip && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
