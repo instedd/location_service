@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /app/bin/goose up >>/var/log/goose.log 2>&1
+exec /app/bin/goose up

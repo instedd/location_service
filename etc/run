@@ -1,4 +1,4 @@
 #!/bin/sh
 
 # Alternatively, run as `exec /sbin/setuser app /app/bin/...` to run as a different user
-exec /app/bin/api >>/var/log/api.log 2>&1
+exec /app/bin/api

@@ -41,6 +41,7 @@ func main() {
 	http.HandleFunc("/children", childrenHandler)
 	http.HandleFunc("/suggest", suggestHandler)
 	http.HandleFunc("/list", listHandler)
+	http.HandleFunc("/", emptyResponseHandler)
 
 	fmt.Printf("Starting on http://0.0.0.0:%d/\n", port)
 	http.ListenAndServe(addr, httpLog(http.DefaultServeMux))
@@ -167,4 +168,16 @@ func buildLocation(loc *model.Location, p model.ReqOptions) *location {
 	}
 
 	return &l
+}
+
+func emptyResponseHandler(res http.ResponseWriter, req *http.Request) {
+	addHeaders(res, req)
+
+	enc := json.NewEncoder(res)
+
+	err := enc.Encode(map[string]string{"status": "200 OK"})
+	
+	if err != nil {
+		log.Fatal(err)
+	}
 }
