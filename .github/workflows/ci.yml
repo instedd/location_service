@@ -1,0 +1,23 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check if the image builds
+        run: docker build .
+  build:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_REPOSITORY: 'instedd/cdx'
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build image & push to Docker Hub
+        run: ./build.sh
