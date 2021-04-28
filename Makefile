@@ -45,6 +45,6 @@ download-ne-%: importer
 	mkdir -p tmp/data
 
 	@echo "Downloading NE $*"
-	curl -s http://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_$*.zip > tmp/data/ne_10m_admin_$*.zip
+	curl -s https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_$*.zip > tmp/data/ne_10m_admin_$*.zip
 	unzip -qo tmp/data/ne_10m_admin_$*.zip -d tmp/data
 	bin/importer -source ne tmp/data/ne_10m_admin_$*.shp
